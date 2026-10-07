@@ -17,7 +17,7 @@ services:
       retries: 5
 
   api:
-    image: ghcr.io/Marsellos/flip-count/flipcount-api:latest
+    image: ghcr.io/andreyvilchinskiy/flip-count/flipcount-api:latest
     container_name: flipcount-api
     depends_on:
       postgres:
