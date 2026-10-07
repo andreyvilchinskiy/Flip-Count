@@ -1,0 +1,7 @@
+target/
+uploads/
+.idea/
+*.iml
+.git/
+README.md
+*.log
