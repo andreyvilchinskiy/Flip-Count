@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аккаунт — Flip Count</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' fill='white' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="space-bg" aria-hidden="true"></div>
+
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>На главную</span>
+            </a>
+            <a href="index.html" class="logo">Flip Count</a>
+            <a href="#" class="login-btn" id="logoutBtn">
+                <svg class="login-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Выйти</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="account-layout">
+        <aside class="account-sidebar">
+            <h3>Аккаунт</h3>
+            <ul class="account-menu" id="accountMenu">
+                <li><a href="#" data-tab="data" class="active">Данные аккаунта</a></li>
+                <li><a href="#" data-tab="settings">Настройки</a></li>
+                <li><a href="#" data-tab="about">О программе</a></li>
+            </ul>
+        </aside>
+
+        <section class="account-content">
+
+            <div class="tab-panel" id="tab-data">
+                <h2>Данные аккаунта</h2>
+                <p class="section-desc">Основная информация о вашем профиле Flip Count</p>
+
+                <div class="data-row">
+                    <div>
+                        <div class="data-label">Никнейм</div>
+                        <div class="data-value" id="userNickname">Загрузка...</div>
+                    </div>
+                </div>
+
+                <div class="data-row">
+                    <div>
+                        <div class="data-label">Email</div>
+                        <div class="data-value email-hidden" id="userEmail">Загрузка...</div>
+                    </div>
+                </div>
+
+                <div class="data-row">
+                    <div>
+                        <div class="data-label">Пароль</div>
+                        <div class="data-value">••••••••••</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="tab-settings" style="display:none;">
+                <h2>Настройки</h2>
+                <p class="section-desc">Общие параметры работы сервиса</p>
+
+                <div class="data-row">
+                    <div>
+                        <div class="data-label">Тема</div>
+                        <div class="data-value">Тёмная (космос)</div>
+                    </div>
+                    <button class="change-btn">Изменить</button>
+                </div>
+
+                <div class="data-row">
+                    <div>
+                        <div class="data-label">Язык</div>
+                        <div class="data-value">Русский</div>
+                    </div>
+                    <button class="change-btn">Изменить</button>
+                </div>
+
+                <div class="data-row">
+                    <div>
+                        <div class="data-label">Уведомления</div>
+                        <div class="data-value">Включены</div>
+                    </div>
+                    <button class="change-btn">Изменить</button>
+                </div>
+            </div>
+
+            <div class="tab-panel" id="tab-about" style="display:none;">
+                <h2>О программе</h2>
+                <p class="section-desc">Краткое описание проекта Flip Count</p>
+
+                <div class="readme-content">
+                    <h3>Что такое Flip Count</h3>
+                    <p>Flip Count — это сервис для учёта и анализа торговых сделок. Позволяет вести несколько профилей, добавлять сделки, объединять их в крафты и следить за прибылью в реальном времени.</p>
+
+                    <h3>Основные возможности</h3>
+                    <ul>
+                        <li>Создание нескольких профилей под разные стратегии</li>
+                        <li>Добавление сделок с автоматическим подсчётом прибыли</li>
+                        <li>Совмещённые сделки (крафты) с учётом доплат и процентов</li>
+                        <li>История сделок с графиками и статистикой</li>
+                        <li>Поддержка пользователей и обратная связь</li>
+                    </ul>
+
+                    <h3>Технологии</h3>
+                    <p>Frontend: HTML, CSS, JavaScript. Backend: Java Spring Boot, PostgreSQL, JWT-авторизация.</p>
+
+                    <h3>Версия</h3>
+                    <p>Текущая версия: <code>1.0.0</code></p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/page-account.js"></script>
+</body>
+</html>

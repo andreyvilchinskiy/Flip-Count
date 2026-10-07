@@ -1,0 +1,211 @@
+/* ============================================
+   ВЕРХНЯЯ ПОЛОСКА (NAVBAR)
+   ============================================ */
+.navbar {
+    width: 100%;
+    padding: 16px 40px;
+    background: linear-gradient(90deg, #6B46C1 0%, #8B5CF6 35%, #6366F1 65%, #3B82F6 100%);
+    box-shadow: 0 4px 20px rgba(107, 70, 193, 0.4);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+    position: relative;
+}
+
+/* Логотип по центру */
+.logo {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    color: #ffffff;
+    text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+.logo:hover { opacity: 0.85; }
+
+/* Кнопка "Войти" справа */
+.login-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.login-btn:hover {
+    background: rgba(255, 255, 255, 0.32);
+    border-color: rgba(255, 255, 255, 0.7);
+}
+.login-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* Кнопка "Назад" слева */
+.back-btn {
+    margin-right: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease;
+}
+.back-btn:hover { background: rgba(255, 255, 255, 0.28); }
+
+/* ============================================
+   ОСНОВНЫЕ КОНТЕЙНЕРЫ СТРАНИЦ
+   ============================================ */
+
+/* Центральный контейнер на главной */
+.main-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 100px 20px 60px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Обёртка внутренних страниц */
+.page-wrapper {
+    flex: 1;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Обёртка форм (вход/регистрация) */
+.form-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Заголовок страницы */
+.page-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+.page-header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 12px;
+    text-shadow: 0 0 20px rgba(147, 197, 253, 0.5);
+    letter-spacing: 1px;
+}
+.page-header p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ============================================
+   ПОДВАЛ (FOOTER)
+   ============================================ */
+.footer {
+    position: relative;
+    z-index: 1;
+    background: rgba(8, 8, 30, 0.9);
+    border-top: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 50px 40px 20px;
+    margin-top: 60px;
+}
+.footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 40px;
+    padding-bottom: 30px;
+}
+.footer-col h3,
+.footer-col h4 {
+    color: var(--text-light);
+    margin-bottom: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.footer-logo {
+    font-size: 22px !important;
+    background: linear-gradient(90deg, #A78BFA, #60A5FA);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-transform: none !important;
+    letter-spacing: 1px !important;
+}
+.footer-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 260px;
+}
+.footer-col ul { list-style: none; }
+.footer-col ul li { margin-bottom: 8px; }
+.footer-col ul a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.15s ease;
+}
+.footer-col ul a:hover { color: var(--accent-light); }
+.footer-bottom {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-top: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    position: relative;
+}
+.footer-bottom::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 30%;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.35));
+}

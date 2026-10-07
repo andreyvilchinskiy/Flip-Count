@@ -1,0 +1,12 @@
+/* ============================================
+   ГЛАВНЫЙ CSS — подключает все остальные
+   Порядок важен: базовые → компоненты → страницы
+   ============================================ */
+@import url('base.css');
+@import url('layout.css');
+@import url('components.css');
+@import url('account.css');
+@import url('profile.css');
+@import url('formula.css');
+@import url('history.css');
+@import url('craft.css');

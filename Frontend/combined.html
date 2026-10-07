@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Совмещённые сделки — Flip Count</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' fill='white' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="space-bg" aria-hidden="true"></div>
+
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Назад</span>
+            </a>
+            <a href="index.html" class="logo">Flip Count</a>
+        </div>
+    </header>
+
+    <div class="page-wrapper" style="max-width: 1400px;">
+        <div class="history-top-row">
+            <div class="page-header">
+                <h1>Совмещённые сделки</h1>
+                <p>Создавайте крафты визуально — фигуры, стрелки, формула</p>
+            </div>
+            <button class="action-btn" id="saveCraftBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2"/>
+                    <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Сохранить крафт
+            </button>
+        </div>
+
+        <div style="position: relative;">
+            <div class="craft-toolbar">
+                <button class="craft-tool-btn active" id="modeCursor" data-mode="select">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    </svg>
+                    Курсор
+                </button>
+                <button class="craft-tool-btn" id="addRectBtn" data-shape="rect">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="6" width="16" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Прямоугольник
+                </button>
+                <button class="craft-tool-btn" id="addCircleBtn" data-shape="circle">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Круг
+                </button>
+                <button class="craft-tool-btn" id="addDiamondBtn" data-shape="diamond">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3l9 9-9 9-9-9z" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Ромб
+                </button>
+                <button class="craft-tool-btn" id="linkModeBtn" data-mode="link">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07L11.75 5.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Связать
+                </button>
+            </div>
+
+            <div class="craft-editor" id="craftEditor">
+                <svg id="craftSvg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#8B5CF6"/>
+                        </marker>
+                    </defs>
+                    <g id="viewport">
+                        <g id="edgesLayer"></g>
+                        <g id="nodesLayer"></g>
+                    </g>
+                </svg>
+
+                <div class="craft-hint">
+                    <span id="hintText">Тащите фигуры мышью. Кликните по пустому полю, чтобы снять выделение</span>
+                </div>
+
+                <div class="craft-zoom-controls">
+                    <button class="craft-zoom-btn" id="zoomInCraft">+</button>
+                    <span class="craft-zoom-level" id="zoomLevelCraft">100%</span>
+                    <button class="craft-zoom-btn" id="zoomOutCraft">−</button>
+                </div>
+
+                <div class="craft-props" id="propsPanel" style="display:none;">
+                    <h4>Фигура</h4>
+                    <label>Название</label>
+                    <input type="text" id="propLabel" placeholder="Например: Технический спирт">
+
+                    <label>Цена предмета</label>
+                    <input type="number" id="propPrice" placeholder="0.00" step="0.01">
+
+                    <label>Выход за 1 крафт</label>
+                    <input type="number" id="propOutput" placeholder="1" min="1" step="1" value="1">
+                    <small style="display:block; color:#94A3B8; font-size:11px; margin-bottom:10px;">
+                        Сколько единиц производится за один крафт
+                    </small>
+
+                    <button class="btn-delete" id="deleteNodeBtn">Удалить</button>
+                </div>
+
+                <div class="craft-props" id="edgePropsPanel" style="display:none;">
+                    <h4>Стрелка</h4>
+                    <label>Количество</label>
+                    <input type="number" id="propQuantity" placeholder="1" min="1" step="1" value="1">
+                    <button class="btn-delete" id="deleteEdgeBtn">Удалить стрелку</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="craft-formula-box">
+            <div class="formula-header">
+                <span class="formula-label">Итоговая формула</span>
+                <button class="formula-copy-btn" id="copyFormulaBtn" title="Скопировать">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="formula-body" id="formulaBody">
+                <div class="formula-placeholder">Добавьте фигуры и связи, чтобы построить формулу</div>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top: 20px;">
+            <h3>Сохранённые крафты</h3>
+            <div id="craftsList" class="profiles-empty">
+                <h4>Пока нет крафтов</h4>
+                <p>Создайте первый крафт в редакторе выше</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="craft-modal" id="craftModal">
+        <div class="craft-modal-overlay" onclick="closeCraftModal()"></div>
+        <div class="craft-modal-content">
+            <h3 id="craftModalTitle">Новый крафт</h3>
+            <p class="craft-modal-desc">Введите название — оно появится в списке формул</p>
+
+            <div class="form-group">
+                <label for="craftNameInput">Название крафта</label>
+                <input type="text" id="craftNameInput" placeholder="Крафт 1" maxlength="60" autocomplete="off"
+                    onkeydown="if(event.key==='Enter') confirmSaveCraft()">
+            </div>
+
+            <div class="craft-modal-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeCraftModal()">Отмена</button>
+                <button class="modal-btn modal-btn-primary" onclick="confirmSaveCraft()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/page-combined.js"></script>
+</body>
+</html>

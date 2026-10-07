@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поддержка — Flip Count</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' fill='white' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="space-bg" aria-hidden="true"></div>
+
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Назад</span>
+            </a>
+            <a href="index.html" class="logo">Flip Count</a>
+        </div>
+    </header>
+
+    <div class="page-wrapper">
+        <div class="page-header">
+            <h1>Поддержка</h1>
+            <p>Предложите идею, оставьте отзыв или задайте вопрос — мы читаем каждое сообщение</p>
+        </div>
+
+        <div class="panel">
+            <h3>Оставить сообщение</h3>
+            <form id="supportForm">
+                <div class="form-group">
+                    <label for="topic">Тема обращения</label>
+                    <input type="text" id="topic" placeholder="Например: предложение новой функции" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Сообщение</label>
+                    <textarea id="message" rows="6" placeholder="Опишите вашу идею, отзыв или вопрос..." required></textarea>
+                </div>
+
+                <button type="submit" class="form-btn">Отправить</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h3>Частые вопросы</h3>
+            <div class="placeholder-box" style="text-align: left; padding: 20px;">
+                <p style="margin-bottom: 14px;"><strong style="color: #DBEAFE;">Как создать профиль?</strong><br>Перейдите в раздел «Профили» и нажмите кнопку «Создать профиль».</p>
+                <p style="margin-bottom: 14px;"><strong style="color: #DBEAFE;">Как добавить сделку?</strong><br>Откройте «Добавление сделок» и заполните поля покупки и продажи.</p>
+                <p><strong style="color: #DBEAFE;">Что такое совмещённые сделки?</strong><br>Это объединение нескольких операций (например, крафтов) в одну сделку с учётом доплат и процентов.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+        // Обработчик формы поддержки
+        document.getElementById('supportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const topic = document.getElementById('topic').value.trim();
+            const message = document.getElementById('message').value.trim();
+
+            if (!topic || !message) {
+                showToast('Заполните все поля', 'info');
+                return;
+            }
+
+            try {
+                await API.sendSupport(topic, message);
+                showToast('Спасибо! Ваше сообщение отправлено.', 'success');
+                e.target.reset();
+            } catch (err) {
+                showToast(err.message || 'Ошибка отправки', 'info');
+            }
+        });
+    </script>
+</body>
+</html>

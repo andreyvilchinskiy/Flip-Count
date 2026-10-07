@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки формулы — Flip Count</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' fill='white' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="space-bg" aria-hidden="true"></div>
+
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="add-deal.html" class="back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>К сделкам</span>
+            </a>
+            <a href="index.html" class="logo">Flip Count</a>
+        </div>
+    </header>
+
+    <div class="page-wrapper" style="max-width: 700px;">
+        <div class="page-header">
+            <h1>Настройки формулы</h1>
+            <p>Задайте выражение и поля ввода для подсчёта прибыли</p>
+        </div>
+
+        <div class="panel">
+            <h3>Формула</h3>
+
+            <div class="form-group">
+                <label for="formulaName">Название формулы</label>
+                <input type="text" id="formulaName" placeholder="Например: Прибыль = Продажа − Покупка" maxlength="100">
+            </div>
+
+            <div class="form-group">
+                <label for="formulaExpression">Выражение</label>
+                <input type="text" id="formulaExpression" placeholder="Например: B - A - B*0.05">
+                <p style="color: #94A3B8; font-size: 12px; margin-top: 6px;">
+                    Используйте переменные (A, B, C...), операции + − × ÷, скобки.<br>
+                    Пример: <code>B-A-B*0.1</code> - это прибыль.
+                </p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Поля ввода</h3>
+            <p style="color: #94A3B8; font-size: 13px; margin-bottom: 16px;">
+                Добавьте поля, которые будут отображаться при добавлении сделки
+            </p>
+
+            <div id="fieldsList"></div>
+
+            <button type="button" class="action-btn secondary" id="addFieldBtn" style="margin-top: 14px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+                Добавить поле
+            </button>
+        </div>
+
+        <button class="form-btn" id="saveBtn">Сохранить формулу</button>
+        <button class="form-btn" id="deleteBtn"
+                style="background: linear-gradient(135deg, #EF4444, #DC2626); margin-top: 10px; display: none;">
+            Удалить формулу
+        </button>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/page-formula.js"></script>
+</body>
+</html>

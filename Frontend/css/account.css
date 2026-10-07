@@ -1,0 +1,171 @@
+/* ============================================
+   АККАУНТ — боковое меню и контент
+   ============================================ */
+.account-layout {
+    flex: 1;
+    display: flex;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px 20px;
+    gap: 30px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Боковая панель */
+.account-sidebar {
+    flex-shrink: 0;
+    width: 260px;
+    background: rgba(20, 25, 70, 0.9);
+    border: 1.5px solid rgba(99, 102, 241, 0.4);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    height: fit-content;
+}
+.account-sidebar h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #93C5FD;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 14px;
+    padding: 0 8px;
+}
+.account-menu { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.account-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #CBD5E1;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 12px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.account-menu a:hover { background: rgba(99, 102, 241, 0.18); color: #ffffff; }
+.account-menu a.active {
+    background: rgba(99, 102, 241, 0.35);
+    color: #ffffff;
+    border: 1px solid rgba(147, 197, 253, 0.35);
+}
+
+/* Контент */
+.account-content {
+    flex: 1;
+    background: var(--bg-panel);
+    border: 1.5px solid rgba(99, 102, 241, 0.4);
+    border-radius: var(--radius-lg);
+    padding: 35px;
+    min-height: 400px;
+}
+.account-content h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.section-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    position: relative;
+}
+.section-desc::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 40%;
+    height: 1px;
+    background: rgba(99, 102, 241, 0.3);
+}
+
+/* Строки данных */
+.data-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.data-row:last-child { border-bottom: none; }
+.data-label {
+    font-size: 13px;
+    color: #93C5FD;
+    font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.data-value {
+    font-size: 15px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Скрытый email (маскированный) */
+.email-hidden { color: var(--text-secondary); font-style: italic; }
+
+/* Кнопка изменения */
+.change-btn {
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #BFDBFE;
+    background: rgba(99, 102, 241, 0.18);
+    border: 1.5px solid rgba(99, 102, 241, 0.5);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.change-btn:hover { background: rgba(99, 102, 241, 0.32); color: #ffffff; }
+
+/* README-контент (О программе) */
+.readme-content {
+    color: #CBD5E1;
+    font-size: 14px;
+    line-height: 1.7;
+}
+.readme-content h3 {
+    color: var(--text-light);
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 22px;
+    margin-bottom: 10px;
+}
+.readme-content h3:first-child { margin-top: 0; }
+.readme-content p { margin-bottom: 12px; }
+.readme-content ul { margin-left: 20px; margin-bottom: 12px; }
+.readme-content li { margin-bottom: 6px; }
+.readme-content code {
+    background: rgba(99, 102, 241, 0.2);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--accent-light);
+}
+
+/* Адаптив */
+@media (max-width: 900px) {
+    .account-layout { flex-direction: column; }
+    .account-sidebar { width: 100%; }
+    .account-menu {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 6px;
+        padding-bottom: 6px;
+    }
+    .account-menu a { white-space: nowrap; padding: 10px 14px; font-size: 13px; }
+}
+@media (max-width: 600px) {
+    .account-content { padding: 22px; }
+    .data-row { flex-direction: column; align-items: flex-start; }
+}

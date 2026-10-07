@@ -1,0 +1,330 @@
+/* ============================================
+   РЕДАКТОР КРАФТОВ (combined.html)
+   ============================================ */
+.craft-editor {
+    position: relative;
+    width: 100%;
+    height: 65vh;
+    background: rgba(10, 15, 50, 0.6);
+    border: 1.5px solid rgba(99, 102, 241, 0.4);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: default;
+}
+.craft-editor.dragging { cursor: grabbing; }
+.craft-editor svg { display: block; width: 100%; height: 100%; user-select: none; }
+
+/* Панель инструментов (сверху слева) */
+.craft-toolbar {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(20, 25, 70, 0.95);
+    border: 1.5px solid rgba(99, 102, 241, 0.5);
+    border-radius: var(--radius-md);
+    z-index: 10;
+    flex-wrap: wrap;
+    max-width: calc(100% - 32px);
+}
+.craft-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #BFDBFE;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1.5px solid rgba(99, 102, 241, 0.4);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.craft-tool-btn:hover { background: rgba(99, 102, 241, 0.4); color: #ffffff; }
+.craft-tool-btn.active {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    color: #ffffff;
+    border-color: transparent;
+}
+
+/* Фигуры (узлы графа) */
+.craft-node { cursor: move; }
+.craft-node rect,
+.craft-node circle,
+.craft-node ellipse,
+.craft-node polygon {
+    fill: rgba(30, 41, 118, 0.9);
+    stroke: var(--accent-indigo);
+    stroke-width: 2;
+    transition: stroke 0.15s ease;
+}
+.craft-node:hover rect,
+.craft-node:hover circle,
+.craft-node:hover ellipse,
+.craft-node:hover polygon { stroke: var(--accent-light); }
+.craft-node.selected rect,
+.craft-node.selected circle,
+.craft-node.selected ellipse,
+.craft-node.selected polygon {
+    stroke: #ffffff;
+    stroke-width: 3;
+}
+.craft-node text {
+    fill: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+}
+.craft-node .node-variable {
+    fill: var(--accent-light);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Ресайз-маркеры по углам */
+.resize-handle {
+    fill: #ffffff;
+    stroke: var(--accent-purple);
+    stroke-width: 2;
+    cursor: nwse-resize;
+}
+
+/* Стрелки между фигурами */
+.craft-edge { cursor: pointer; }
+.craft-edge path {
+    stroke: var(--accent-purple);
+    stroke-width: 2;
+    fill: none;
+    marker-end: url(#arrowhead);
+}
+.craft-edge:hover path { stroke: var(--accent-light); stroke-width: 3; }
+.craft-edge text {
+    fill: #ffffff;
+    font-family: sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: var(--bg-deep);
+    stroke-width: 4;
+}
+
+/* Панель свойств (справа сверху) */
+.craft-props {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 240px;
+    padding: 16px;
+    background: rgba(20, 25, 70, 0.95);
+    border: 1.5px solid rgba(99, 102, 241, 0.5);
+    border-radius: var(--radius-md);
+    z-index: 10;
+}
+.craft-props h4 {
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+.craft-props input,
+.craft-props select {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #ffffff;
+    background: var(--bg-input);
+    border: 1.5px solid rgba(99, 102, 241, 0.4);
+    border-radius: 8px;
+    outline: none;
+    margin-bottom: 10px;
+}
+.craft-props input:focus { border-color: #818CF8; }
+.craft-props label {
+    display: block;
+    font-size: 11px;
+    color: #93C5FD;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.craft-props .btn-delete {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #FCA5A5;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1.5px solid rgba(239, 68, 68, 0.4);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.craft-props .btn-delete:hover { background: rgba(239, 68, 68, 0.35); color: #ffffff; }
+
+/* Управление зумом (снизу справа) */
+.craft-zoom-controls {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(20, 25, 70, 0.9);
+    border: 1.5px solid rgba(99, 102, 241, 0.5);
+    border-radius: var(--radius-md);
+    z-index: 10;
+    box-shadow: var(--shadow-md);
+}
+.craft-zoom-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(99, 102, 241, 0.25);
+    border: 1.5px solid rgba(99, 102, 241, 0.5);
+    border-radius: 8px;
+    color: #BFDBFE;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+}
+.craft-zoom-btn:hover { background: rgba(99, 102, 241, 0.5); color: #ffffff; }
+.craft-zoom-level {
+    min-width: 50px;
+    text-align: center;
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Подсказка (снизу слева) */
+.craft-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    padding: 8px 16px;
+    background: rgba(20, 25, 70, 0.9);
+    border: 1.5px solid rgba(99, 102, 241, 0.4);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 12px;
+    z-index: 10;
+}
+
+/* ============================================
+   ФОРМУЛА — красивое отображение
+   ============================================ */
+.craft-formula-box {
+    margin-top: 16px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(59, 130, 246, 0.08));
+    border: 1.5px solid rgba(52, 211, 153, 0.35);
+    border-radius: var(--radius-lg);
+}
+.formula-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+.formula-label {
+    font-size: 11px;
+    color: #93C5FD;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.formula-copy-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1.5px solid rgba(99, 102, 241, 0.4);
+    border-radius: 8px;
+    color: #BFDBFE;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.formula-copy-btn:hover { background: rgba(99, 102, 241, 0.4); color: #ffffff; }
+
+.formula-body {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text-light);
+}
+.formula-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+/* Токены формулы (переменные, числа, операции) */
+.formula-token {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    padding: 3px 8px;
+    font-weight: 700;
+    border-radius: 6px;
+    font-size: 14px;
+}
+.formula-token.var { background: rgba(139, 92, 246, 0.25); color: var(--accent-light); }
+.formula-token.num { background: rgba(59, 130, 246, 0.2); color: #93C5FD; }
+.formula-token.op { color: var(--text-secondary); min-width: auto; padding: 3px 4px; }
+.formula-token.sale {
+    background: linear-gradient(135deg, var(--success), #10B981);
+    color: #ffffff;
+    padding: 4px 12px;
+    letter-spacing: 0.5px;
+}
+
+/* Легенда переменных под формулой */
+.formula-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(99, 102, 241, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.formula-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.formula-legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+.formula-placeholder {
+    color: var(--text-muted);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-style: italic;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Адаптив */
+@media (max-width: 700px) {
+    .craft-editor { height: 50vh; }
+    .craft-props { width: 180px; padding: 10px; }
+    .craft-toolbar { position: static; margin-bottom: 10px; }
+}

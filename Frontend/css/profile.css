@@ -1,0 +1,144 @@
+/* ============================================
+   ПРОФИЛИ — горизонтальная строка
+   ============================================ */
+.profiles-row {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 10px 5px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99, 102, 241, 0.5) transparent;
+}
+.profiles-row::-webkit-scrollbar { height: 6px; }
+.profiles-row::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.5);
+    border-radius: 3px;
+}
+
+/* Квадрат профиля */
+.profile-square {
+    flex-shrink: 0;
+    width: 120px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.18s ease;
+    user-select: none;
+}
+.profile-square:hover { transform: translateY(-4px); }
+
+/* Аватар (картинка или буква) */
+.profile-square-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    border: 3px solid transparent;
+    margin: 0 auto 8px;
+    box-shadow: 0 6px 20px rgba(107, 70, 193, 0.4);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.profile-square-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Первая буква названия */
+.profile-letter {
+    font-size: 42px;
+    font-weight: 800;
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.profile-square-name {
+    font-size: 13px;
+    color: #BFDBFE;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+    margin: 0 auto;
+}
+
+/* Активный профиль — подсветка */
+.profile-square.active .profile-square-avatar {
+    border-color: var(--accent-light);
+    box-shadow:
+        0 0 0 3px rgba(165, 180, 252, 0.3),
+        0 8px 24px rgba(59, 130, 246, 0.5);
+}
+.profile-square.active .profile-square-name { color: #ffffff; }
+
+/* Кнопка "+" — выглядит как обычный профиль */
+.profile-square.add-new .profile-square-avatar {
+    background: rgba(99, 102, 241, 0.12);
+    border: 3px dashed rgba(99, 102, 241, 0.6);
+    box-shadow: 0 6px 20px rgba(107, 70, 193, 0.15);
+}
+.profile-square.add-new:hover .profile-square-avatar {
+    background: rgba(99, 102, 241, 0.22);
+    border-style: solid;
+    border-color: rgba(147, 197, 253, 0.85);
+}
+.profile-plus {
+    font-size: 52px;
+    font-weight: 200;
+    color: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    transition: color 0.2s ease, transform 0.2s ease;
+    padding-bottom: 6px;
+}
+.profile-square.add-new:hover .profile-plus { color: #ffffff; transform: scale(1.1); }
+.profile-square.add-new .profile-square-name { color: var(--accent-light); font-weight: 500; }
+
+/* Пустое состояние */
+.profiles-empty { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.profiles-empty h4 { color: #CBD5E1; font-size: 16px; margin-bottom: 6px; }
+.profiles-empty p { font-size: 13px; }
+
+/* ============================================
+   НАСТРОЙКИ ПРОФИЛЯ — загрузка аватара
+   ============================================ */
+.profile-settings-avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: 28px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    margin: 0 auto 20px;
+    box-shadow: 0 10px 32px rgba(107, 70, 193, 0.5);
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s ease;
+}
+.profile-settings-avatar:hover { transform: scale(1.03); }
+.profile-settings-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-settings-avatar .profile-letter { font-size: 62px; }
+.profile-settings-avatar .upload-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    padding: 10px;
+}
+.profile-settings-avatar:hover .upload-overlay { opacity: 1; }
+
+.file-input-hidden { display: none; }

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>История сделок — Flip Count</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-family='Arial,sans-serif' font-size='34' font-weight='bold' fill='white' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="space-bg" aria-hidden="true"></div>
+
+    <header class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Назад</span>
+            </a>
+            <a href="index.html" class="logo">Flip Count</a>
+        </div>
+    </header>
+
+    <div class="page-wrapper" style="max-width: 1400px;">
+        <div class="history-top-row">
+            <div class="page-header">
+                <h1>История сделок</h1>
+                <p>Просматривайте прибыль, выделяйте сделки и удаляйте ненужные</p>
+            </div>
+
+            <div class="history-tabs">
+                <button class="history-tab active" data-view="chart">📈 График</button>
+                <button class="history-tab" data-view="text">📄 Текст</button>
+            </div>
+        </div>
+
+        <div class="history-panel" id="historyPanel">
+            <div class="history-view" id="viewChart">
+                <canvas id="dealsCanvas"></canvas>
+
+                <div class="zoom-controls">
+                    <button class="zoom-btn" id="zoomIn" title="Приблизить">+</button>
+                    <span class="zoom-level" id="zoomLevel">100%</span>
+                    <button class="zoom-btn" id="zoomOut" title="Отдалить">−</button>
+                </div>
+            </div>
+
+            <div class="history-view" id="viewText" style="display:none;">
+                <div class="deals-text" id="dealsText"></div>
+            </div>
+
+            <div class="empty-history" id="emptyHistory" style="display:none;">
+                <h3>Пока нет сделок</h3>
+                <p>Добавьте первую сделку, чтобы увидеть историю</p>
+            </div>
+        </div>
+
+        <div class="history-footer">
+            <div class="total-profit" id="totalProfit">
+                <span class="total-label" id="totalLabel">Общая прибыль</span>
+                <span class="total-value" id="totalValue">0.00 ₽</span>
+            </div>
+
+            <button class="action-btn delete-selected" id="deleteSelectedBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Удалить выделенные
+            </button>
+        </div>
+    </div>
+
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-modal-overlay" onclick="closeConfirmModal()"></div>
+        <div class="confirm-modal-content">
+            <h3>Подтверждение удаления</h3>
+            <p id="confirmText">Вы точно хотите удалить N сделок?</p>
+            <div class="confirm-actions">
+                <button class="modal-btn modal-btn-secondary" onclick="closeConfirmModal()">Отмена</button>
+                <button class="modal-btn modal-btn-danger" onclick="confirmDelete()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/page-history.js"></script>
+</body>
+</html>
