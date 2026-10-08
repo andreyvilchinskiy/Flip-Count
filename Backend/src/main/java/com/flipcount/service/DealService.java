@@ -84,6 +84,11 @@ public class DealService {
             replaced = replaced.replaceAll("\\b" + entry.getKey() + "\\b",
                     entry.getValue().toString());
         }
+        // Заменяем красивые символы на понятные парсеру
+        replaced = replaced.replace("×", "*")
+                .replace("÷", "/")
+                .replace("−", "-")   // типографский минус
+                .replace("—", "-");  // длинное тире
 
         try {
             double result = eval(replaced);

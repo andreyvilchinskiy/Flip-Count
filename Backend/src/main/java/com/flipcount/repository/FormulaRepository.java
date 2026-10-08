@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FormulaRepository extends JpaRepository<Formula, Long> {
-    List<Formula> findByUserId(Long userId);
+    List<Formula> findByUserIdOrderByCreatedAtAsc(Long userId);
     Optional<Formula> findByUserIdAndActiveTrue(Long userId);
 }

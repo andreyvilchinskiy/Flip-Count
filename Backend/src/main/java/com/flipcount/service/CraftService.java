@@ -7,8 +7,12 @@ import com.flipcount.repository.FormulaRepository;
 import com.flipcount.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.flipcount.entity.FormulaField;
 import java.util.*;
+import java.util.ArrayList;
+import com.flipcount.entity.FormulaField;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * CRUD крафтов.
@@ -68,10 +72,51 @@ public class CraftService {
                 .expression(req.getFormula())
                 .craftId(craft.getId())
                 .isCraft(true)
-                .active(formulas.findByUserId(user.getId()).isEmpty())  // первый — активный
+                .active(formulas.findByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty())
                 .user(user)
                 .build();
         formulas.save(formula);
+
+        // Генерируем поля формулы из узлов крафта.
+        // Пользователь вводит только исходные материалы (A, B, G),
+        // промежуточные (C, E) и финальные (D) — считаются автоматически.
+        if (req.getNodes() != null) {
+            // Собираем ID узлов, у которых есть исходящие стрелки (полуфабрикаты)
+            Set<Long> withOutgoing = new HashSet<>();
+            if (req.getEdges() != null) {
+                for (CraftEdgeDto e : req.getEdges()) {
+                    withOutgoing.add(e.getFromNodeId());
+                }
+            }
+
+            // Собираем ID узлов, у которых есть входящие стрелки (их кто-то использует)
+            Set<Long> withIncoming = new HashSet<>();
+            if (req.getEdges() != null) {
+                for (CraftEdgeDto e : req.getEdges()) {
+                    withIncoming.add(e.getToNodeId());
+                }
+            }
+
+            List<FormulaField> fields = new ArrayList<>();
+            int order = 0;
+            for (CraftNodeDto nodeDto : req.getNodes()) {
+                Long id = nodeDto.getId();
+
+                // Пропускаем ВСЕ узлы, у которых есть входящие стрелки —
+                // это не исходники, а вычисляемые (полуфабрикаты и финал).
+                // Вводятся только те, к которым стрелки НЕ ведут.
+                if (id != null && withIncoming.contains(id)) continue;
+
+                fields.add(FormulaField.builder()
+                        .label(nodeDto.getLabel() != null ? nodeDto.getLabel() : nodeDto.getVariable())
+                        .variable(nodeDto.getVariable())
+                        .displayOrder(order++)
+                        .formula(formula)
+                        .build());
+            }
+            formula.setFields(fields);
+            formulas.save(formula);
+        }
 
         craft.setFormulaId(formula.getId());
         crafts.save(craft);
@@ -100,6 +145,29 @@ public class CraftService {
             formulas.findById(craft.getFormulaId()).ifPresent(f -> {
                 f.setName(req.getName());
                 f.setExpression(req.getFormula());
+                f.getFields().clear();
+
+                if (req.getNodes() != null) {
+                    Set<Long> withIncoming = new HashSet<>();
+                    if (req.getEdges() != null) {
+                        for (CraftEdgeDto e : req.getEdges()) {
+                            withIncoming.add(e.getToNodeId());
+                        }
+                    }
+
+                    int order = 0;
+                    for (CraftNodeDto nodeDto : req.getNodes()) {
+                        Long nodeId = nodeDto.getId();
+                        if (nodeId != null && withIncoming.contains(nodeId)) continue;
+
+                        f.getFields().add(FormulaField.builder()
+                                .label(nodeDto.getLabel() != null ? nodeDto.getLabel() : nodeDto.getVariable())
+                                .variable(nodeDto.getVariable())
+                                .displayOrder(order++)
+                                .formula(f)
+                                .build());
+                    }
+                }
                 formulas.save(f);
             });
         }

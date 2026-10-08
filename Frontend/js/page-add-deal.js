@@ -115,22 +115,26 @@ async function loadDynamicFields() {
             input.dataset.variable = f.variable;
             input.placeholder = '0.00';
 
+            // 🆕 Обработчики — на input И change
+            input.addEventListener('input', updateProfitPreview);
+            input.addEventListener('change', updateProfitPreview);
+
             group.appendChild(label);
             group.appendChild(input);
             container.appendChild(group);
-
-            input.addEventListener('input', updateProfitPreview);
         });
 
+        // Первый пересчёт
         updateProfitPreview();
     } catch (err) {
+        console.error('Ошибка загрузки полей:', err);
         showToast(err.message, 'info');
     }
 }
 
 /**
  * Подсчёт прибыли в реальном времени.
- * Значения подставляются в формулу и результат пересчитывается на лету.
+ * Работает и для ручных формул, и для крафтов.
  */
 function updateProfitPreview() {
     const profitEl = document.getElementById('profitValue');
@@ -142,14 +146,14 @@ function updateProfitPreview() {
         return;
     }
 
-    // Собираем значения из полей
+    // 1. Собираем значения из полей
     const values = {};
     document.querySelectorAll('#dynamicFields input').forEach(inp => {
         const val = inp.value.trim();
         values[inp.dataset.variable] = val === '' ? null : parseFloat(val);
     });
 
-    // Проверяем, все ли заполнены
+    // 2. Проверяем, что все поля заполнены
     const allFilled = Object.values(values).every(v => v !== null && !isNaN(v));
     if (!allFilled) {
         profitEl.textContent = '—';
@@ -158,12 +162,27 @@ function updateProfitPreview() {
         return;
     }
 
-    // Подставляем значения в формулу
+    // 3. Берём выражение без "= ..." в конце
     let expr = activeFormula.expression.split('=')[0].trim();
-    for (const [key, val] of Object.entries(values)) {
-        expr = expr.replace(new RegExp('\\b' + key + '\\b', 'g'), val);
+
+    // 4. Подставляем значения переменных.
+    // Сортируем ключи по длине — чтобы "AB" заменилось раньше, чем "A"
+    const keys = Object.keys(values).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+        expr = expr.replace(new RegExp('\\b' + key + '\\b', 'g'), values[key]);
     }
 
+    // 5. Заменяем все варианты красивых символов на понятные JavaScript
+    expr = expr
+        .replace(/×/g, '*')   // знак умножения U+00D7
+        .replace(/✕/g, '*')   // multiplication X U+2715
+        .replace(/⨯/g, '*')   // vector cross U+2A2F
+        .replace(/÷/g, '/')   // знак деления
+        .replace(/−/g, '-')   // типографский минус U+2212
+        .replace(/–/g, '-')   // en-dash
+        .replace(/—/g, '-');  // em-dash
+
+    // 6. Вычисляем выражение
     try {
         const result = Function('"use strict"; return (' + expr + ')')();
         const profit = parseFloat(result.toFixed(2));
@@ -176,7 +195,6 @@ function updateProfitPreview() {
 
         profitEl.textContent = profit.toFixed(2) + ' ₽';
 
-        // Меняем надпись и цвет в зависимости от знака
         if (profit < 0) {
             labelEl.textContent = 'Убыль';
             preview.classList.add('negative');
@@ -185,6 +203,7 @@ function updateProfitPreview() {
             preview.classList.remove('negative');
         }
     } catch (e) {
+        console.error('Ошибка формулы:', e.message, '→', expr);
         profitEl.textContent = '—';
         preview.classList.remove('negative');
     }

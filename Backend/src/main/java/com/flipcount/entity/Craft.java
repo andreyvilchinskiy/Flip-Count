@@ -3,7 +3,7 @@ package com.flipcount.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -35,10 +35,12 @@ public class Craft {
     private User user;
 
     @OneToMany(mappedBy = "craft", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CraftNode> nodes;
+    @Builder.Default
+    private List<CraftNode> nodes = new ArrayList<>();
 
     @OneToMany(mappedBy = "craft", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CraftEdge> edges;
+    @Builder.Default
+    private List<CraftEdge> edges = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

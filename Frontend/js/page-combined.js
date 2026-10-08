@@ -21,7 +21,7 @@ const editor = document.getElementById('craftEditor');
 /* ---------- СОСТОЯНИЕ РЕДАКТОРА ---------- */
 let editingCraftId = null;       // ID редактируемого крафта (null — новый)
 let currentCraftName = null;     // имя редактируемого крафта
-
+let lastFormulaPlain = '';
 let nodes = [];                  // массив фигур
 let edges = [];                  // массив стрелок
 let nextTempId = 1;              // временный ID для фигур
@@ -640,9 +640,11 @@ function updateFormula() {
         body.innerHTML = '<div class="formula-placeholder">Не удалось построить формулу</div>';
         return '';
     }
-
+    // Сохраняем plain-текст для последующего использования
+    lastFormulaPlain = buildResult.plain + ' = ' + finalNode.variable + ' (продажа)';
     renderPrettyFormula(body, buildResult, finalNode);
     return buildResult.plain + ' = ' + finalNode.variable + ' (продажа)';
+    return lastFormulaPlain;
 }
 
 /**
@@ -817,9 +819,8 @@ async function confirmSaveCraft() {
         return;
     }
 
-    // Текст формулы берём из отрисованной (первая строка)
-    const formula = document.getElementById('formulaBody').innerText
-        .split('\n').filter(l => l.trim())[0] || '';
+    // Берём plain-текст из последнего результата updateFormula
+    const formula = lastFormulaPlain || '';
 
     // Маппинг временных ID → порядковые номера для бэка
     const tempIdToIndex = {};

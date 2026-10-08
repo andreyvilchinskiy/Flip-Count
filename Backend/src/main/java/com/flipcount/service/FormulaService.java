@@ -31,7 +31,7 @@ public class FormulaService {
     }
 
     public List<Formula> list(String email) {
-        return formulas.findByUserId(currentUser(email).getId());
+        return formulas.findByUserIdOrderByCreatedAtAsc(currentUser(email).getId());
     }
 
     public Formula getOne(String email, Long id) {
@@ -56,7 +56,7 @@ public class FormulaService {
                 .name(req.getName())
                 .expression(req.getExpression())
                 .user(user)
-                .active(formulas.findByUserId(user.getId()).isEmpty())  // первый — активный
+                .active(formulas.findByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty())
                 .build();
         formulas.save(formula);
 
@@ -108,7 +108,7 @@ public class FormulaService {
     @Transactional
     public void activate(String email, Long formulaId) {
         User user = currentUser(email);
-        List<Formula> all = formulas.findByUserId(user.getId());
+        List<Formula> all = formulas.findByUserIdOrderByCreatedAtAsc(user.getId());
 
         boolean found = false;
         for (Formula f : all) {
