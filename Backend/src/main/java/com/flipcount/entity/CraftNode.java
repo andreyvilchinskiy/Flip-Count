@@ -17,13 +17,13 @@ public class CraftNode {
     private Long id;
 
     @Column(nullable = false, length = 10)
-    private String variable;              // "A", "B", "C"...
+    private String variable;
 
     @Column(nullable = false)
-    private String label;                 // "Бумага"
+    private String label;
 
     @Column(nullable = false)
-    private String shape;                 // rect | circle | diamond
+    private String shape;
 
     @Column(name = "pos_x")
     @Builder.Default
@@ -34,11 +34,20 @@ public class CraftNode {
     private Double posY = 0.0;
 
     @Column(name = "item_price")
-    private BigDecimal itemPrice;         // цена предмета (опционально)
+    private BigDecimal itemPrice;          // цена покупки единицы (опционально)
 
-    @Column(name = "output_amount", nullable = false)
+    @Column(name = "output_amount")
     @Builder.Default
-    private Integer output = 1;           // сколько единиц производится за 1 крафт
+    private Integer output = 1;
+
+    //  цена продажи — только у финального узла
+    @Column(name = "sale_price", precision = 19, scale = 2)
+    private BigDecimal salePrice;
+
+    // является ли узел точкой продажи
+    @Column(name = "is_sale_point")
+    @Builder.Default
+    private Boolean isSalePoint = false;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

@@ -3,7 +3,7 @@ package com.flipcount.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-
+import java.util.ArrayList;
 import java.util.List;
 
 /** Профиль пользователя — отдельная «стратегия» с собственными сделками. */
@@ -37,5 +37,6 @@ public class Profile {
 
     @JsonIgnore
     @OneToMany(mappedBy = "profile", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Deal> deals;
+    @Builder.Default
+    private List<Deal> deals = new ArrayList<>();
 }

@@ -1,9 +1,7 @@
 package com.flipcount.service;
 
 import com.flipcount.dto.DealRequest;
-import com.flipcount.entity.Deal;
-import com.flipcount.entity.Formula;
-import com.flipcount.entity.Profile;
+import com.flipcount.entity.*;
 import com.flipcount.repository.DealRepository;
 import com.flipcount.repository.ProfileRepository;
 import org.springframework.stereotype.Service;
@@ -14,30 +12,31 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 
-/** Создание, список и удаление сделок. */
 @Service
 public class DealService {
 
     private final DealRepository deals;
     private final ProfileRepository profiles;
     private final FormulaService formulaService;
+    private final CraftService craftService;
 
     public DealService(DealRepository deals,
                        ProfileRepository profiles,
-                       FormulaService formulaService) {
+                       FormulaService formulaService,
+                       CraftService craftService) {
         this.deals = deals;
         this.profiles = profiles;
         this.formulaService = formulaService;
+        this.craftService = craftService;
     }
 
     public Deal create(String email, DealRequest req) {
-        // Проверяем, что профиль принадлежит этому пользователю
         Profile profile = profiles.findById(req.getProfileId())
                 .orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));
+
         if (!profile.getUser().getEmail().equals(email))
             throw new IllegalArgumentException("Нет доступа к этому профилю");
 
-        // Берём формулу: либо ту, что передали, либо активную
         Formula formula;
         if (req.getFormulaId() != null) {
             formula = formulaService.getOne(email, req.getFormulaId());
@@ -47,8 +46,17 @@ public class DealService {
                 throw new IllegalArgumentException("Нет активной формулы");
         }
 
-        // Считаем прибыль
-        BigDecimal profit = calculateProfit(formula.getExpression(), req.getValues());
+        int multiplier = req.getMultiplier() != null && req.getMultiplier() > 0
+                ? req.getMultiplier() : 1;
+
+        BigDecimal profit;
+
+        if (Boolean.TRUE.equals(formula.getIsCraft()) && formula.getCraftId() != null) {
+            Craft craft = craftService.getOne(email, formula.getCraftId());
+            profit = calculateCraftProfit(craft, req.getValues(), multiplier);
+        } else {
+            profit = calculateProfit(formula.getExpression(), req.getValues());
+        }
 
         Deal deal = Deal.builder()
                 .buyPrice(getValue(req.getValues(), "A"))
@@ -68,27 +76,73 @@ public class DealService {
     }
 
     /**
-     * Парсер формул. Поддерживает +, -, *, /, скобки, десятичные числа.
-     * Если формула записана как «B - A = P», берётся только левая часть.
+     * Расчёт прибыли по крафту.
+     * multiplier — сколько крафтов делается за раз.
+     * salePoint — узел с флагом isSalePoint и ценой salePrice.
+     * quantity на стрелке к salePoint = сколько единиц продаём.
      */
+    private BigDecimal calculateCraftProfit(Craft craft,
+                                            Map<String, BigDecimal> values,
+                                            int multiplier) {
+
+        CraftNode saleNode = craft.getNodes().stream()
+                .filter(n -> Boolean.TRUE.equals(n.getIsSalePoint()))
+                .findFirst()
+                .orElse(null);
+
+        if (saleNode == null || saleNode.getSalePrice() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        // Сколько единиц продаём — берём quantity из стрелки к точке продажи
+        int saleQuantity = craft.getEdges().stream()
+                .filter(e -> e.getToNodeId().equals(saleNode.getId()))
+                .map(CraftEdge::getQuantity)
+                .findFirst()
+                .orElse(1);
+
+        int produced = multiplier;
+        int actualSold = Math.min(produced, saleQuantity);
+
+        // Выручка: цена продажи × сколько реально продали
+        BigDecimal revenue = saleNode.getSalePrice()
+                .multiply(BigDecimal.valueOf(actualSold));
+
+        // Затраты: цена покупки каждого материала × введённое значение × multiplier
+        BigDecimal costs = BigDecimal.ZERO;
+        for (CraftNode node : craft.getNodes()) {
+            if (Boolean.TRUE.equals(node.getIsSalePoint())) continue;
+            if (node.getItemPrice() == null) continue;
+
+            BigDecimal val = values != null
+                    ? values.getOrDefault(node.getVariable(), BigDecimal.ZERO)
+                    : BigDecimal.ZERO;
+
+            costs = costs.add(
+                    node.getItemPrice()
+                            .multiply(val)
+                            .multiply(BigDecimal.valueOf(multiplier))
+            );
+        }
+
+        return revenue.subtract(costs).setScale(2, RoundingMode.HALF_UP);
+    }
+
     private BigDecimal calculateProfit(String expression, Map<String, BigDecimal> values) {
         if (expression == null || values == null) return BigDecimal.ZERO;
 
-        // Убираем "= P" и всё после "=", если пользователь так написал
         String cleanExpr = expression.split("=")[0].trim();
-
-        // Подставляем значения переменных
         String replaced = cleanExpr;
+
         for (Map.Entry<String, BigDecimal> entry : values.entrySet()) {
-            // \b — граница слова, чтобы «A» не съело «AB»
             replaced = replaced.replaceAll("\\b" + entry.getKey() + "\\b",
                     entry.getValue().toString());
         }
-        // Заменяем красивые символы на понятные парсеру
+
         replaced = replaced.replace("×", "*")
                 .replace("÷", "/")
-                .replace("−", "-")   // типографский минус
-                .replace("—", "-");  // длинное тире
+                .replace("−", "-")
+                .replace("—", "-");
 
         try {
             double result = eval(replaced);
@@ -98,7 +152,6 @@ public class DealService {
         }
     }
 
-    /** Рекурсивный парсер простых математических выражений. */
     private double eval(final String str) {
         return new Object() {
             int pos = -1, ch;
@@ -177,7 +230,6 @@ public class DealService {
         deals.delete(deal);
     }
 
-    /** Удалить несколько сделок сразу. */
     @Transactional
     public void deleteBatch(String email, List<Long> ids) {
         for (Long id : ids) {

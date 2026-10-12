@@ -38,7 +38,23 @@
             <h3>Добавление сделки</h3>
             <form id="dealForm">
                 <div id="dynamicFields"></div>
-
+                <div class="form-group multiplier-group">
+                    <label for="dealMultiplier">Количество крафтов за раз</label>
+                    <select id="dealMultiplier">
+                        <option value="1">X1</option>
+                        <option value="2">X2</option>
+                        <option value="5">X5</option>
+                        <option value="10">X10</option>
+                        <option value="50">X50</option>
+                        <option value="100">X100</option>
+                        <option value="500">X500</option>
+                        <option value="1000">X1 000</option>
+                        <option value="10000">X10 000</option>
+                        <option value="100000">X100 000</option>
+                        <option value="1000000">X1 000 000</option>
+                        <option value="10000000">X10 000 000</option>
+                    </select>
+                </div>
                 <div class="profit-preview" id="profitPreview">
                     <span class="profit-label" id="profitLabel">Прибыль</span>
                     <span class="profit-value" id="profitValue">—</span>

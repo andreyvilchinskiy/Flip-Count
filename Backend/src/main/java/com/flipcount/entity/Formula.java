@@ -3,7 +3,7 @@ package com.flipcount.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -48,8 +48,8 @@ public class Formula {
     private User user;
 
     @OneToMany(mappedBy = "formula", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<FormulaField> fields;
-
+    @Builder.Default
+    private List<FormulaField> fields = new ArrayList<>();
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();

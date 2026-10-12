@@ -18,7 +18,7 @@ node_modules/
 
 # === Загруженные файлы ===
 uploads/
-Backend/uploads/
+uploads/
 
 # === Логи ===
 *.log

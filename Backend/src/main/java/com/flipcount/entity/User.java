@@ -3,7 +3,7 @@ package com.flipcount.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,7 +32,8 @@ public class User {
     /** Список профилей — не сериализуем в JSON, чтобы не было рекурсии. */
     @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Profile> profiles;
+    @Builder.Default
+    private List<Profile> profiles = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

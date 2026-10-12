@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 /** DTO фигуры крафта (для передачи с фронта). */
 @Data
 public class CraftNodeDto {
-    private Long id;                       // временный ID (нужен для связей между узлами)
+    private Long id;
     private String variable;
     private String label;
     private String shape;
@@ -15,4 +15,6 @@ public class CraftNodeDto {
     private Double posY;
     private BigDecimal itemPrice;
     private Integer output = 1;
+    private BigDecimal salePrice;
+    private Boolean isSalePoint = false;
 }

@@ -2,11 +2,12 @@
    ЛОГИКА ДОБАВЛЕНИЯ СДЕЛОК (add-deal.html)
    ============================================ */
 
-let activeFormula = null; // текущая активная формула
+let activeFormula = null;   // текущая активная формула
+let dealMultiplier = 1;     // сколько крафтов делается за раз
 
 /**
  * Загрузка списка формул (включая крафты).
- * Крафты помечаются бейджем 🔧.
+ * Крафты помечаются бейджем КРАФТ.
  */
 async function loadFormulas() {
     const row = document.getElementById('formulasRow');
@@ -21,20 +22,19 @@ async function loadFormulas() {
             el.className = 'formula-row' + (f.active ? ' active' : '');
             el.dataset.id = f.id;
 
-            // Бейдж "КРАФТ" для визуально созданных формул
             const badge = f.isCraft
-                ? '<span style="display:inline-block;padding:2px 8px;background:rgba(139,92,246,0.25);color:#A5B4FC;border-radius:6px;font-size:11px;font-weight:700;margin-right:8px;">🔧 КРАФТ</span>'
+                ? '<span style="display:inline-block;padding:2px 8px;background:rgba(139,92,246,0.25);color:#A5B4FC;border-radius:6px;font-size:11px;font-weight:700;margin-right:8px;">КРАФТ</span>'
                 : '';
 
             el.innerHTML = `
                 <div class="formula-text">${badge}${f.name}</div>
                 <div class="formula-actions">
-                    <button class="formula-icon-btn" title="Изменить" 
+                    <button class="formula-icon-btn" title="Изменить"
                             onclick="editFormula(${f.id}, ${f.isCraft}); event.stopPropagation();">
                         <svg viewBox="0 0 24 24" fill="none">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" 
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
                                   stroke="currentColor" stroke-width="2"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" 
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
                                   stroke="currentColor" stroke-width="2"/>
                         </svg>
                     </button>
@@ -72,7 +72,7 @@ async function loadFormulas() {
 
 /**
  * Открыть формулу для редактирования.
- * Крафты → в визуальный редактор, ручные → в настройки.
+ * Крафты — в визуальный редактор, ручные — в настройки.
  */
 function editFormula(id, isCraft) {
     if (isCraft) {
@@ -82,7 +82,10 @@ function editFormula(id, isCraft) {
     }
 }
 
-/** Загрузка полей ввода по активной формуле */
+/**
+ * Загрузка полей ввода по активной формуле.
+ * Если формула — крафт, показывает селект множителя.
+ */
 async function loadDynamicFields() {
     const container = document.getElementById('dynamicFields');
     container.innerHTML = '';
@@ -96,6 +99,7 @@ async function loadDynamicFields() {
             p.textContent = 'Создайте формулу для начала работы';
             container.appendChild(p);
             document.getElementById('profitValue').textContent = '—';
+            hideMultiplier();
             return;
         }
 
@@ -115,7 +119,6 @@ async function loadDynamicFields() {
             input.dataset.variable = f.variable;
             input.placeholder = '0.00';
 
-            // 🆕 Обработчики — на input И change
             input.addEventListener('input', updateProfitPreview);
             input.addEventListener('change', updateProfitPreview);
 
@@ -124,13 +127,38 @@ async function loadDynamicFields() {
             container.appendChild(group);
         });
 
-        // Первый пересчёт
+        // Показываем селект множителя только для крафта
+        if (activeFormula.isCraft) {
+            showMultiplier();
+        } else {
+            hideMultiplier();
+            dealMultiplier = 1;
+        }
+
         updateProfitPreview();
     } catch (err) {
         console.error('Ошибка загрузки полей:', err);
         showToast(err.message, 'info');
     }
 }
+
+/** Показать блок множителя */
+function showMultiplier() {
+    const block = document.getElementById('multiplierBlock');
+    if (block) block.style.display = 'block';
+}
+
+/** Скрыть блок множителя */
+function hideMultiplier() {
+    const block = document.getElementById('multiplierBlock');
+    if (block) block.style.display = 'none';
+}
+
+/** Обработчик селекта множителя */
+document.getElementById('dealMultiplier')?.addEventListener('change', (e) => {
+    dealMultiplier = parseInt(e.target.value) || 1;
+    updateProfitPreview();
+});
 
 /**
  * Подсчёт прибыли в реальном времени.
@@ -174,17 +202,23 @@ function updateProfitPreview() {
 
     // 5. Заменяем все варианты красивых символов на понятные JavaScript
     expr = expr
-        .replace(/×/g, '*')   // знак умножения U+00D7
-        .replace(/✕/g, '*')   // multiplication X U+2715
-        .replace(/⨯/g, '*')   // vector cross U+2A2F
-        .replace(/÷/g, '/')   // знак деления
-        .replace(/−/g, '-')   // типографский минус U+2212
-        .replace(/–/g, '-')   // en-dash
-        .replace(/—/g, '-');  // em-dash
+        .replace(/×/g, '*')
+        .replace(/✕/g, '*')
+        .replace(/⨯/g, '*')
+        .replace(/÷/g, '/')
+        .replace(/−/g, '-')
+        .replace(/–/g, '-')
+        .replace(/—/g, '-');
 
     // 6. Вычисляем выражение
     try {
-        const result = Function('"use strict"; return (' + expr + ')')();
+        let result = Function('"use strict"; return (' + expr + ')')();
+
+        // Для крафта умножаем на множитель
+        if (activeFormula.isCraft) {
+            result = result * dealMultiplier;
+        }
+
         const profit = parseFloat(result.toFixed(2));
 
         if (isNaN(profit) || !isFinite(profit)) {
@@ -233,11 +267,18 @@ document.getElementById('dealForm').addEventListener('submit', async (e) => {
             return;
         }
 
-        const deal = await API.createDeal(active.id, activeFormula.id, values);
+        const deal = await API.createDeal(
+            active.id,
+            activeFormula.id,
+            values,
+            dealMultiplier
+        );
         showToast('Прибыль: ' + deal.profit + ' ₽', 'success');
 
         // Очищаем поля для следующей сделки
         document.querySelectorAll('#dynamicFields input').forEach(inp => inp.value = '');
+        document.getElementById('dealMultiplier').value = '1';
+        dealMultiplier = 1;
         updateProfitPreview();
     } catch (err) {
         showToast(err.message, 'info');

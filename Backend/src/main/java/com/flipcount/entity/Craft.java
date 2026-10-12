@@ -46,4 +46,5 @@ public class Craft {
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
     }
+
 }

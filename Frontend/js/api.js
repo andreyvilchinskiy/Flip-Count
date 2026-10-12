@@ -112,10 +112,10 @@ const API = {
 
     // --- Сделки ---
     getDeals: (profileId) => apiRequest('/deals/profile/' + profileId),
-    createDeal: (profileId, formulaId, values) =>
+    createDeal: (profileId, formulaId, values, multiplier) =>
         apiRequest('/deals', {
             method: 'POST',
-            body: JSON.stringify({ profileId, formulaId, values })
+            body: JSON.stringify({ profileId, formulaId, values, multiplier })
         }),
     deleteDeal: (id) => apiRequest('/deals/' + id, { method: 'DELETE' }),
     deleteDealsBatch: (ids) =>
