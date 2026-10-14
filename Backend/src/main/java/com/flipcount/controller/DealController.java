@@ -45,4 +45,9 @@ public class DealController {
         dealService.deleteBatch(auth.getName(), req.getIds());
         return ResponseEntity.ok("Удалено: " + req.getIds().size());
     }
+
+    @PostMapping("/preview")
+    public ResponseEntity<?> preview(@RequestBody DealRequest req, Authentication auth) {
+        return ResponseEntity.ok(dealService.preview(auth.getName(), req));
+    }
 }

@@ -4,6 +4,7 @@
 
 let activeFormula = null;   // текущая активная формула
 let dealMultiplier = 1;     // сколько крафтов делается за раз
+let previewTimer = null;
 
 /**
  * Загрузка списка формул (включая крафты).
@@ -130,6 +131,8 @@ async function loadDynamicFields() {
         // Показываем селект множителя только для крафта
         if (activeFormula.isCraft) {
             showMultiplier();
+            document.getElementById('dealMultiplier').value = 1;
+            dealMultiplier = 1;
         } else {
             hideMultiplier();
             dealMultiplier = 1;
@@ -155,11 +158,25 @@ function hideMultiplier() {
 }
 
 /** Обработчик селекта множителя */
-document.getElementById('dealMultiplier')?.addEventListener('change', (e) => {
-    dealMultiplier = parseInt(e.target.value) || 1;
+document.getElementById('dealMultiplier')?.addEventListener('input', (e) => {
+    let val = parseInt(e.target.value);
+
+    // Ограничения: от 1 до 10 000 000
+    if (isNaN(val) || val < 1) val = 1;
+    if (val > 10000000) val = 10000000;
+
+    dealMultiplier = val;
     updateProfitPreview();
 });
 
+document.querySelectorAll('.multiplier-presets button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const val = parseInt(btn.dataset.mult);
+        document.getElementById('dealMultiplier').value = val;
+        dealMultiplier = val;
+        updateProfitPreview();
+    });
+});
 /**
  * Подсчёт прибыли в реальном времени.
  * Работает и для ручных формул, и для крафтов.
@@ -174,14 +191,12 @@ function updateProfitPreview() {
         return;
     }
 
-    // 1. Собираем значения из полей
     const values = {};
     document.querySelectorAll('#dynamicFields input').forEach(inp => {
         const val = inp.value.trim();
         values[inp.dataset.variable] = val === '' ? null : parseFloat(val);
     });
 
-    // 2. Проверяем, что все поля заполнены
     const allFilled = Object.values(values).every(v => v !== null && !isNaN(v));
     if (!allFilled) {
         profitEl.textContent = '—';
@@ -190,59 +205,32 @@ function updateProfitPreview() {
         return;
     }
 
-    // 3. Берём выражение без "= ..." в конце
-    let expr = activeFormula.expression.split('=')[0].trim();
+    // Debounce 250 мс — не дёргаем API на каждое нажатие
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(async () => {
+        try {
+            const profiles = await API.getProfiles();
+            const active = profiles.find(p => p.active);
+            if (!active) return;
 
-    // 4. Подставляем значения переменных.
-    // Сортируем ключи по длине — чтобы "AB" заменилось раньше, чем "A"
-    const keys = Object.keys(values).sort((a, b) => b.length - a.length);
-    for (const key of keys) {
-        expr = expr.replace(new RegExp('\\b' + key + '\\b', 'g'), values[key]);
-    }
+            const res = await API.previewDeal(
+                active.id, activeFormula.id, values, dealMultiplier
+            );
+            const profit = parseFloat(res.profit);
 
-    // 5. Заменяем все варианты красивых символов на понятные JavaScript
-    expr = expr
-        .replace(/×/g, '*')
-        .replace(/✕/g, '*')
-        .replace(/⨯/g, '*')
-        .replace(/÷/g, '/')
-        .replace(/−/g, '-')
-        .replace(/–/g, '-')
-        .replace(/—/g, '-');
-
-    // 6. Вычисляем выражение
-    try {
-        let result = Function('"use strict"; return (' + expr + ')')();
-
-        // Для крафта умножаем на множитель
-        if (activeFormula.isCraft) {
-            result = result * dealMultiplier;
+            profitEl.textContent = profit.toFixed(2) + ' ₽';
+            if (profit < 0) {
+                labelEl.textContent = 'Убыль';
+                preview.classList.add('negative');
+            } else {
+                labelEl.textContent = 'Прибыль';
+                preview.classList.remove('negative');
+            }
+        } catch (err) {
+            console.error(err);
         }
-
-        const profit = parseFloat(result.toFixed(2));
-
-        if (isNaN(profit) || !isFinite(profit)) {
-            profitEl.textContent = '—';
-            preview.classList.remove('negative');
-            return;
-        }
-
-        profitEl.textContent = profit.toFixed(2) + ' ₽';
-
-        if (profit < 0) {
-            labelEl.textContent = 'Убыль';
-            preview.classList.add('negative');
-        } else {
-            labelEl.textContent = 'Прибыль';
-            preview.classList.remove('negative');
-        }
-    } catch (e) {
-        console.error('Ошибка формулы:', e.message, '→', expr);
-        profitEl.textContent = '—';
-        preview.classList.remove('negative');
-    }
+    }, 250);
 }
-
 /* ============================================
    СОХРАНЕНИЕ СДЕЛКИ
    ============================================ */
@@ -277,7 +265,8 @@ document.getElementById('dealForm').addEventListener('submit', async (e) => {
 
         // Очищаем поля для следующей сделки
         document.querySelectorAll('#dynamicFields input').forEach(inp => inp.value = '');
-        document.getElementById('dealMultiplier').value = '1';
+        const multInput = document.getElementById('dealMultiplier');
+        if (multInput) multInput.value = '1';
         dealMultiplier = 1;
         updateProfitPreview();
     } catch (err) {

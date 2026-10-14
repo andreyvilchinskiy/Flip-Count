@@ -123,7 +123,9 @@ function addNode(shape, x, y) {
         width: 100,
         height: 50,
         price: null,
-        output: 1
+        output: 1,
+        salePrice: null,       // 🆕
+        isSalePoint: false     // 🆕
     });
 
     render();
@@ -548,6 +550,10 @@ function selectNode(tempId) {
     document.getElementById('propLabel').value = node.label;
     document.getElementById('propPrice').value = node.price || '';
     document.getElementById('propOutput').value = node.output || 1;
+    document.getElementById('propIsSale').checked = !!node.isSalePoint;
+    document.getElementById('propSalePrice').value = node.salePrice || '';
+    document.getElementById('salePriceGroup').style.display =
+        node.isSalePoint ? 'block' : 'none';
     render();
 }
 
@@ -587,6 +593,23 @@ document.getElementById('propOutput').addEventListener('input', (e) => {
         updateFormula();
         render();
     }
+});
+
+document.getElementById('propIsSale').addEventListener('change', (e) => {
+    const node = nodes.find(n => n.tempId === selectedNodeTempId);
+    if (!node) return;
+    node.isSalePoint = e.target.checked;
+    document.getElementById('salePriceGroup').style.display =
+        e.target.checked ? 'block' : 'none';
+    render();
+    updateFormula();
+});
+
+document.getElementById('propSalePrice').addEventListener('input', (e) => {
+    const node = nodes.find(n => n.tempId === selectedNodeTempId);
+    if (!node) return;
+    node.salePrice = parseFloat(e.target.value) || null;
+    updateFormula();
 });
 
 document.getElementById('propQuantity').addEventListener('input', (e) => {
@@ -643,7 +666,6 @@ function updateFormula() {
     // Сохраняем plain-текст для последующего использования
     lastFormulaPlain = buildResult.plain + ' = ' + finalNode.variable + ' (продажа)';
     renderPrettyFormula(body, buildResult, finalNode);
-    return buildResult.plain + ' = ' + finalNode.variable + ' (продажа)';
     return lastFormulaPlain;
 }
 
@@ -680,18 +702,6 @@ function buildPrettyExpression(nodeTempId, visited) {
         let plain = subExpr.plain;
         let simple = subExpr.simple;
 
-        // Деление на output (если узел производит >1 за крафт)
-        const output = from.output || 1;
-        if (output > 1) {
-            if (!simple) {
-                tokens = [{ type: 'op', text: '(' }, ...tokens, { type: 'op', text: ')' }];
-                plain = `(${plain})`;
-            }
-            tokens.push({ type: 'op', text: '/' });
-            tokens.push({ type: 'num', text: output });
-            plain += ` / ${output}`;
-            simple = false;
-        }
 
         // Умножение на количество
         if (edge.quantity !== 1) {
@@ -837,8 +847,11 @@ async function confirmSaveCraft() {
             posX: n.x,
             posY: n.y,
             itemPrice: n.price,
-            output: n.output || 1
+            output: n.output || 1,
+            salePrice: n.salePrice || null,
+            isSalePoint: n.isSalePoint || false
         })),
+
         edges: edges.map(e => ({
             fromNodeId: tempIdToIndex[e.fromTempId],
             toNodeId: tempIdToIndex[e.toTempId],
@@ -969,7 +982,9 @@ async function loadCraftToEditor(craftId) {
                 width: 100,
                 height: 50,
                 price: n.itemPrice,
-                output: n.output || 1
+                output: n.output || 1,
+                salePrice: n.salePrice || null,
+                isSalePoint: n.isSalePoint || false
             });
         });
 
@@ -983,6 +998,7 @@ async function loadCraftToEditor(craftId) {
 
         editingCraftId = craft.id;
         currentCraftName = craft.name;
+
 
         render();
         updateFormula();

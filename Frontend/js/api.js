@@ -41,7 +41,11 @@ async function apiRequest(endpoint, options = {}) {
     }
     return data;
 }
-
+previewDeal: (profileId, formulaId, values, multiplier) =>
+    apiRequest('/deals/preview', {
+        method: 'POST',
+        body: JSON.stringify({ profileId, formulaId, values, multiplier })
+    }),
 /* ============================================
    Все методы API в одном объекте
    ============================================ */

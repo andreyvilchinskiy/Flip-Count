@@ -38,22 +38,23 @@
             <h3>Добавление сделки</h3>
             <form id="dealForm">
                 <div id="dynamicFields"></div>
-                <div class="form-group multiplier-group">
+                <div class="form-group multiplier-group" id="multiplierBlock" style="display: none;">
                     <label for="dealMultiplier">Количество крафтов за раз</label>
-                    <select id="dealMultiplier">
-                        <option value="1">X1</option>
-                        <option value="2">X2</option>
-                        <option value="5">X5</option>
-                        <option value="10">X10</option>
-                        <option value="50">X50</option>
-                        <option value="100">X100</option>
-                        <option value="500">X500</option>
-                        <option value="1000">X1 000</option>
-                        <option value="10000">X10 000</option>
-                        <option value="100000">X100 000</option>
-                        <option value="1000000">X1 000 000</option>
-                        <option value="10000000">X10 000 000</option>
-                    </select>
+                    <input type="number"
+                           id="dealMultiplier"
+                           min="1"
+                           max="10000000"
+                           step="1"
+                           value="1"
+                           placeholder="Введите число от 1 до 10 000 000">
+                    <small class="multiplier-hint">Сколько крафтов делается за раз</small>
+                    <div class="multiplier-presets">
+                        <button type="button" data-mult="1">×1</button>
+                        <button type="button" data-mult="5">×5</button>
+                        <button type="button" data-mult="10">×10</button>
+                        <button type="button" data-mult="100">×100</button>
+                        <button type="button" data-mult="1000">×1000</button>
+                    </div>
                 </div>
                 <div class="profit-preview" id="profitPreview">
                     <span class="profit-label" id="profitLabel">Прибыль</span>

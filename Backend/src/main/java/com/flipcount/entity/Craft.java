@@ -18,6 +18,10 @@ public class Craft {
     private Long id;
 
     @Column(nullable = false)
+    @Builder.Default
+    private Integer multiplier = 1;
+
+    @Column(nullable = false)
     private String name;
 
     @Column(length = 1000)

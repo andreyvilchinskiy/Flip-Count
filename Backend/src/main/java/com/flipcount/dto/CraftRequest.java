@@ -9,6 +9,7 @@ import java.util.List;
 public class CraftRequest {
     private String name;
     private String formula;
+    private Integer multiplier = 1;
     private List<CraftNodeDto> nodes;
     private List<CraftEdgeDto> edges;
 }
