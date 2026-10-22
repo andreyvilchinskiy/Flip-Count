@@ -30,6 +30,21 @@ public class DealService {
         this.craftService = craftService;
     }
 
+    /**
+     * Результат расчёта крафта:
+     *  - profit    — итоговая прибыль (выручка − затраты)
+     *  - buyPrice  — суммарные затраты на материалы (за multiplier крафтов)
+     *  - sellPrice — выручка от продажи (цена за 1 шт × фактически проданное)
+     */
+    public record CraftCalculation(
+            BigDecimal profit,
+            BigDecimal buyPrice,
+            BigDecimal sellPrice
+    ) {}
+
+    /* ============================================================
+       СОЗДАНИЕ СДЕЛКИ
+       ============================================================ */
     public Deal create(String email, DealRequest req) {
         Profile profile = profiles.findById(req.getProfileId())
                 .orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));
@@ -54,37 +69,16 @@ public class DealService {
         BigDecimal sellPrice;
 
         if (Boolean.TRUE.equals(formula.getIsCraft()) && formula.getCraftId() != null) {
+            // ---- КРАФТ ----
             Craft craft = craftService.getOne(email, formula.getCraftId());
-            profit = calculateCraftProfit(craft, req.getValues(), multiplier);
-
-            // buyPrice = сумма затрат на материалы
-            buyPrice = BigDecimal.ZERO;
-            for (CraftNode node : craft.getNodes()) {
-                if (Boolean.TRUE.equals(node.getIsSalePoint())) continue;
-                if (node.getItemPrice() == null) continue;
-                BigDecimal val = req.getValues() != null
-                        ? req.getValues().getOrDefault(node.getVariable(), BigDecimal.ZERO)
-                        : BigDecimal.ZERO;
-                buyPrice = buyPrice.add(node.getItemPrice().multiply(val)
-                        .multiply(BigDecimal.valueOf(multiplier)));
-            }
-
-            // sellPrice = выручка от продажи
-            CraftNode saleNode = craft.getNodes().stream()
-                    .filter(n -> Boolean.TRUE.equals(n.getIsSalePoint()))
-                    .findFirst().orElse(null);
-            sellPrice = (saleNode != null && saleNode.getSalePrice() != null)
-                    ? saleNode.getSalePrice().multiply(
-                    BigDecimal.valueOf(Math.min(multiplier, 1)))  // заглушка, см. ниже
-                    : BigDecimal.ZERO;
-
-            // Точный sellPrice = salePrice × actualSold — можно вычислить так же, как в calculateCraftProfit,
-            // либо вернуть из calculateCraftProfit вторым значением (объектом).
-            // Проще: пересчитать actualSold ещё раз (см. финальную версию метода).
-
+            CraftCalculation calc = calculateCraft(craft, req.getValues(), multiplier);
+            profit = calc.profit();
+            buyPrice = calc.buyPrice();
+            sellPrice = calc.sellPrice();
         } else {
+            // ---- РУЧНАЯ ФОРМУЛА ----
             profit = calculateProfit(formula.getExpression(), req.getValues());
-            // Для ручной формулы — первое поле = покупка, второе = продажа
+
             List<FormulaField> fields = formula.getFields();
             buyPrice = fields.size() > 0
                     ? getValue(req.getValues(), fields.get(0).getVariable())
@@ -105,12 +99,9 @@ public class DealService {
         return deals.save(deal);
     }
 
-    private BigDecimal getValue(Map<String, BigDecimal> values, String key) {
-        return (values != null && values.get(key) != null)
-                ? values.get(key)
-                : BigDecimal.ZERO;
-    }
-
+    /* ============================================================
+       ПРЕДПРОСМОТР (без сохранения)
+       ============================================================ */
     public Map<String, BigDecimal> preview(String email, DealRequest req) {
         Profile profile = profiles.findById(req.getProfileId())
                 .orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));
@@ -131,36 +122,42 @@ public class DealService {
         BigDecimal profit;
         if (Boolean.TRUE.equals(formula.getIsCraft()) && formula.getCraftId() != null) {
             Craft craft = craftService.getOne(email, formula.getCraftId());
-            profit = calculateCraftProfit(craft, req.getValues(), multiplier);
+            profit = calculateCraft(craft, req.getValues(), multiplier).profit();
         } else {
             profit = calculateProfit(formula.getExpression(), req.getValues());
         }
         return Map.of("profit", profit);
     }
 
-    /**
-     * Расчёт прибыли по крафту.
-     *
-     * Логика:
-     *  - multiplier — сколько крафтов за раз (вводит пользователь).
-     *  - output у финального узла — сколько единиц производится за 1 крафт.
-     *  - quantity на стрелке к SalePoint — сколько единиц продаём.
-     *  - Если произвели больше, чем продаём — в прибыль идёт только проданное.
-     *  - itemPrice начального узла — цена за 1 шт.
-     *  - values (введённые значения) — цена за 1 шт для каждого начального узла.
-     */
-    private BigDecimal calculateCraftProfit(Craft craft,
-                                            Map<String, BigDecimal> values,
-                                            int multiplier) {
+    /* ============================================================
+       РАСЧЁТ КРАФТА
+       ============================================================
+       Логика:
+        - multiplier — сколько крафтов за раз.
+        - output финального узла — сколько единиц производится за 1 крафт.
+        - quantity на стрелке к SalePoint — сколько единиц продаём.
+        - Если произвели больше, чем продаём — в прибыль идёт только проданное.
+        - itemPrice начального узла — цена за 1 шт.
+        - values (введённые значения) — цена за 1 шт для каждого начального узла.
+       ============================================================ */
+    public CraftCalculation calculateCraft(Craft craft,
+                                           Map<String, BigDecimal> values,
+                                           int multiplier) {
 
-        // 1. Найти точку продажи
+        // 1. Точка продажи
         CraftNode saleNode = craft.getNodes().stream()
                 .filter(n -> Boolean.TRUE.equals(n.getIsSalePoint()))
                 .findFirst()
                 .orElse(null);
 
         if (saleNode == null || saleNode.getSalePrice() == null) {
-            return BigDecimal.ZERO;
+            // Нет точки продажи — выручки нет, но затраты могут быть
+            BigDecimal costs = calculateMaterialCosts(craft, values, multiplier);
+            return new CraftCalculation(
+                    costs.negate().setScale(2, RoundingMode.HALF_UP),
+                    costs,
+                    BigDecimal.ZERO
+            );
         }
 
         // 2. Сколько единиц продаём (сумма quantity всех стрелок в SalePoint)
@@ -170,7 +167,7 @@ public class DealService {
                 .sum();
         if (soldUnits <= 0) soldUnits = 1;
 
-        // 3. Узнать output финального узла (того, от которого идёт стрелка в SalePoint)
+        // 3. output финального узла (от которого идёт стрелка в SalePoint)
         Long producerId = craft.getEdges().stream()
                 .filter(e -> e.getToNodeId().equals(saleNode.getId()))
                 .map(CraftEdge::getFromNodeId)
@@ -186,19 +183,39 @@ public class DealService {
                     .orElse(1);
         }
 
-        // 4. Сколько реально произведено и сколько реально продаём
+        // 4. Произведено vs продано
         int produced = multiplier * unitsPerCraft;
-        int actualSold = Math.min(produced, soldUnits);   // 🎯 ключевое правило
+        int actualSold = Math.min(produced, soldUnits);
 
-        // 5. Выручка = цена за 1 шт × фактически проданное количество
+        // 5. Выручка = цена за 1 шт × фактически проданное
         BigDecimal revenue = saleNode.getSalePrice()
                 .multiply(BigDecimal.valueOf(actualSold));
 
-        // 6. Затраты = Σ (цена за 1 шт × введённая цена × multiplier)
+        // 6. Затраты на материалы
+        BigDecimal costs = calculateMaterialCosts(craft, values, multiplier);
+
+        BigDecimal profit = revenue.subtract(costs)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        return new CraftCalculation(
+                profit,
+                costs.setScale(2, RoundingMode.HALF_UP),
+                revenue.setScale(2, RoundingMode.HALF_UP)
+        );
+    }
+
+    /**
+     * Сумма затрат на материалы:
+     *   Σ (itemPrice узла × введённая цена × multiplier)
+     * SalePoint в расчёте НЕ участвует.
+     */
+    private BigDecimal calculateMaterialCosts(Craft craft,
+                                              Map<String, BigDecimal> values,
+                                              int multiplier) {
         BigDecimal costs = BigDecimal.ZERO;
         for (CraftNode node : craft.getNodes()) {
-            if (Boolean.TRUE.equals(node.getIsSalePoint())) continue;  // продажа не материал
-            if (node.getItemPrice() == null) continue;                 // цена не задана — 0
+            if (Boolean.TRUE.equals(node.getIsSalePoint())) continue;
+            if (node.getItemPrice() == null) continue;
 
             BigDecimal val = (values != null && values.get(node.getVariable()) != null)
                     ? values.get(node.getVariable())
@@ -210,8 +227,16 @@ public class DealService {
                             .multiply(BigDecimal.valueOf(multiplier))
             );
         }
+        return costs;
+    }
 
-        return revenue.subtract(costs).setScale(2, RoundingMode.HALF_UP);
+    /* ============================================================
+       РУЧНАЯ ФОРМУЛА
+       ============================================================ */
+    private BigDecimal getValue(Map<String, BigDecimal> values, String key) {
+        return (values != null && values.get(key) != null)
+                ? values.get(key)
+                : BigDecimal.ZERO;
     }
 
     private BigDecimal calculateProfit(String expression, Map<String, BigDecimal> values) {
@@ -300,6 +325,9 @@ public class DealService {
         }.parse();
     }
 
+    /* ============================================================
+       ПРОЧЕЕ
+       ============================================================ */
     public List<Deal> listByProfile(String email, Long profileId) {
         Profile profile = profiles.findById(profileId)
                 .orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));

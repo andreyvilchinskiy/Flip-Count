@@ -150,13 +150,26 @@
 }
 .craft-props input:focus { border-color: #818CF8; }
 .craft-props label {
-    display: block;
-    font-size: 11px;
-    color: #93C5FD;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #BFDBFE;
     font-weight: 600;
-    margin-bottom: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.craft-props input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-purple);
+    cursor: pointer;
+    margin: 0;
+    flex-shrink: 0;
 }
 .craft-props .btn-delete {
     width: 100%;

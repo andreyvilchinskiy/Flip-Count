@@ -526,9 +526,25 @@ function handleLinkClick(node) {
     });
 
     linkingFrom = null;
-    render();
+
+    // 🆕 Если целевой узел был выделен — обновим панель свойств
+    if (selectedNodeTempId === node.tempId) {
+        selectNode(node.tempId);
+    } else {
+        render();
+    }
+
     updateFormula();
     updateHint();
+}
+
+/**
+ * Есть ли у узла входящие стрелки?
+ * Если да — это промежуточный или финальный узел,
+ * у него НЕ показываем поле цены покупки.
+ */
+function hasIncomingEdges(tempId) {
+    return edges.some(e => e.toTempId === tempId);
 }
 
 /* ============================================
@@ -547,16 +563,35 @@ function selectNode(tempId) {
 
     document.getElementById('edgePropsPanel').style.display = 'none';
     document.getElementById('propsPanel').style.display = 'block';
+
     document.getElementById('propLabel').value = node.label;
-    document.getElementById('propPrice').value = node.price || '';
     document.getElementById('propOutput').value = node.output || 1;
-    document.getElementById('propIsSale').checked = !!node.isSalePoint;
-    document.getElementById('propSalePrice').value = node.salePrice || '';
+
+    // Цена покупки — только для узлов без входящих
+    const showPrice = !hasIncomingEdges(node.tempId);
+    document.getElementById('priceGroup').style.display =
+        showPrice ? 'block' : 'none';
+    document.getElementById('propPrice').value = node.price ?? '';
+
+    // 🆕 Чекбокс "точка продажи" — только для финальных или уже помеченных
+    const hasOutgoing = edges.some(e => e.fromTempId === node.tempId);
+    const canBeSalePoint = !hasOutgoing || node.isSalePoint;
+    document.getElementById('propIsSale').parentElement.style.display =
+        canBeSalePoint ? 'flex' : 'none';
+
+    // Если узел не может быть SalePoint — снимаем флаг
+    if (!canBeSalePoint && node.isSalePoint) {
+        node.isSalePoint = false;
+    }
+
+    const isSale = !!node.isSalePoint;
+    document.getElementById('propIsSale').checked = isSale;
+    document.getElementById('propSalePrice').value = node.salePrice ?? '';
     document.getElementById('salePriceGroup').style.display =
-        node.isSalePoint ? 'block' : 'none';
+        isSale ? 'block' : 'none';
+
     render();
 }
-
 function selectEdge(index) {
     selectedEdgeIndex = index;
     selectedNodeTempId = null;
@@ -622,9 +657,11 @@ document.getElementById('propQuantity').addEventListener('input', (e) => {
 
 document.getElementById('deleteNodeBtn').addEventListener('click', () => {
     if (selectedNodeTempId === null) return;
-    nodes = nodes.filter(n => n.tempId !== selectedNodeTempId);
+
+    const deletedId = selectedNodeTempId;
+    nodes = nodes.filter(n => n.tempId !== deletedId);
     edges = edges.filter(e =>
-        e.fromTempId !== selectedNodeTempId && e.toTempId !== selectedNodeTempId
+        e.fromTempId !== deletedId && e.toTempId !== deletedId
     );
     selectedNodeTempId = null;
     document.getElementById('propsPanel').style.display = 'none';
@@ -634,10 +671,17 @@ document.getElementById('deleteNodeBtn').addEventListener('click', () => {
 
 document.getElementById('deleteEdgeBtn').addEventListener('click', () => {
     if (selectedEdgeIndex === null) return;
+    const removed = edges[selectedEdgeIndex];
     edges.splice(selectedEdgeIndex, 1);
     selectedEdgeIndex = null;
     document.getElementById('edgePropsPanel').style.display = 'none';
-    render();
+
+    // Если у целевого узла больше нет входящих — обновим панель
+    if (selectedNodeTempId === removed.toTempId) {
+        selectNode(removed.toTempId);
+    } else {
+        render();
+    }
     updateFormula();
 });
 
