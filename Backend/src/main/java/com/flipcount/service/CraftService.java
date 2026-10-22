@@ -46,25 +46,26 @@ public class CraftService {
     public Craft create(String email, CraftRequest req) {
         User user = currentUser(email);
 
-        Craft craft = Craft.builder()
-                .name(req.getName())
-                .formula(req.getFormula())
-                .multiplier(req.getMultiplier() != null ? req.getMultiplier() : 1)
-                .user(user)
-                .build();
+        Craft craft = new Craft(
+                req.getName(),
+                req.getFormula(),
+                req.getMultiplier() != null ? req.getMultiplier() : 1,
+                user
+        );
+
+        // Сохраняем черновой крафт, чтобы сгенерировались ID для узлов
         crafts.save(craft);
 
         saveNodesAndEdges(craft, req);
 
         // Создаём связанную формулу
-        Formula formula = Formula.builder()
-                .name(req.getName())
-                .expression(req.getFormula())
-                .craftId(craft.getId())
-                .isCraft(true)
-                .active(formulas.findByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty())
-                .user(user)
-                .build();
+        Formula formula = new Formula();
+        formula.setName(req.getName());
+        formula.setExpression(req.getFormula());
+        formula.setCraftId(craft.getId());
+        formula.setIsCraft(true);
+        formula.setActive(formulas.findByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty());
+        formula.setUser(user);
         formulas.save(formula);
 
         // Генерируем поля формулы из узлов
@@ -85,10 +86,12 @@ public class CraftService {
         craft.setFormula(req.getFormula());
         craft.setMultiplier(req.getMultiplier() != null ? req.getMultiplier() : 1);
 
+        // Очищаем старые списки
         craft.getNodes().clear();
         craft.getEdges().clear();
         crafts.save(craft);
 
+        // Заполняем новыми данными
         saveNodesAndEdges(craft, req);
 
         if (craft.getFormulaId() != null) {
@@ -104,11 +107,6 @@ public class CraftService {
         return craft;
     }
 
-    /**
-     * Генерирует поля формулы из узлов крафта.
-     * Пользователь вводит только те узлы, к которым НЕ ведут стрелки
-     * (исходные материалы). Промежуточные и финальные — вычисляются.
-     */
     private void generateFormulaFields(Formula formula, CraftRequest req) {
         if (req.getNodes() == null) return;
 
@@ -124,12 +122,13 @@ public class CraftService {
             Long nodeId = nodeDto.getId();
             if (nodeId != null && withIncoming.contains(nodeId)) continue;
 
-            formula.getFields().add(FormulaField.builder()
-                    .label(nodeDto.getLabel() != null ? nodeDto.getLabel() : nodeDto.getVariable())
-                    .variable(nodeDto.getVariable())
-                    .displayOrder(order++)
-                    .formula(formula)
-                    .build());
+            FormulaField field = new FormulaField();
+            field.setLabel(nodeDto.getLabel() != null ? nodeDto.getLabel() : nodeDto.getVariable());
+            field.setVariable(nodeDto.getVariable());
+            field.setDisplayOrder(order++);
+            field.setFormula(formula);
+
+            formula.getFields().add(field);
         }
     }
 
@@ -139,20 +138,21 @@ public class CraftService {
         // Узлы
         if (req.getNodes() != null) {
             for (CraftNodeDto dto : req.getNodes()) {
-                craft.getNodes().add(CraftNode.builder()
-                        .variable(dto.getVariable())
-                        .label(dto.getLabel())
-                        .shape(dto.getShape())
-                        .posX(dto.getPosX())
-                        .posY(dto.getPosY())
-                        .itemPrice(dto.getItemPrice())
-                        .output(dto.getOutput() != null ? dto.getOutput() : 1)
-                        .salePrice(dto.getSalePrice())
-                        .isSalePoint(dto.getIsSalePoint() != null ? dto.getIsSalePoint() : false)
-                        .craft(craft)
-                        .build());
+                CraftNode node = new CraftNode();
+                node.setVariable(dto.getVariable());
+                node.setLabel(dto.getLabel());
+                node.setShape(dto.getShape());
+                node.setPosX(dto.getPosX());
+                node.setPosY(dto.getPosY());
+                node.setItemPrice(dto.getItemPrice());
+                node.setOutput(dto.getOutput() != null ? dto.getOutput() : 1);
+                node.setSalePrice(dto.getSalePrice());
+                node.setIsSalePoint(dto.getIsSalePoint() != null ? dto.getIsSalePoint() : false);
+                node.setCraft(craft);
+
+                craft.getNodes().add(node);
             }
-            crafts.save(craft);
+            crafts.save(craft); // Сохраняем, чтобы узлы получили ID
 
             for (int i = 0; i < req.getNodes().size(); i++) {
                 Long tempId = req.getNodes().get(i).getId();
@@ -167,12 +167,13 @@ public class CraftService {
                 Long fromReal = tempToReal.getOrDefault(dto.getFromNodeId(), dto.getFromNodeId());
                 Long toReal = tempToReal.getOrDefault(dto.getToNodeId(), dto.getToNodeId());
 
-                craft.getEdges().add(CraftEdge.builder()
-                        .fromNodeId(fromReal)
-                        .toNodeId(toReal)
-                        .quantity(dto.getQuantity() != null ? dto.getQuantity() : 1)
-                        .craft(craft)
-                        .build());
+                CraftEdge edge = new CraftEdge();
+                edge.setFromNodeId(fromReal);
+                edge.setToNodeId(toReal);
+                edge.setQuantity(dto.getQuantity() != null ? dto.getQuantity() : 1);
+                edge.setCraft(craft);
+
+                craft.getEdges().add(edge);
             }
             crafts.save(craft);
         }

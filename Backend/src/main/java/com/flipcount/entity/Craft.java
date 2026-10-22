@@ -10,7 +10,7 @@ import java.util.List;
 /** Крафт — визуально собранный рецепт из фигур и стрелок. */
 @Entity
 @Table(name = "crafts")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor
 public class Craft {
 
     @Id
@@ -18,17 +18,16 @@ public class Craft {
     private Long id;
 
     @Column(nullable = false)
-    @Builder.Default
-    private Integer multiplier = 1;
-
-    @Column(nullable = false)
     private String name;
 
     @Column(length = 1000)
-    private String formula;               // текст формулы (например, "((A × 4) + (C × 2)) × 2 = E")
+    private String formula;
 
     @Column(name = "formula_id")
-    private Long formulaId;               // ID связанной Formula (создаётся автоматически)
+    private Long formulaId;
+
+    @Column(nullable = false)
+    private Integer multiplier = 1;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -39,16 +38,23 @@ public class Craft {
     private User user;
 
     @OneToMany(mappedBy = "craft", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<CraftNode> nodes = new ArrayList<>();
 
     @OneToMany(mappedBy = "craft", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<CraftEdge> edges = new ArrayList<>();
+
+    // Конструктор для безопасного создания
+    public Craft(String name, String formula, Integer multiplier, User user) {
+        this.name = name;
+        this.formula = formula;
+        this.multiplier = multiplier;
+        this.user = user;
+        this.nodes = new ArrayList<>();
+        this.edges = new ArrayList<>();
+    }
 
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
     }
-
 }

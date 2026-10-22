@@ -7,7 +7,7 @@ import lombok.*;
 /** Стрелка между фигурами с числом (количество). */
 @Entity
 @Table(name = "craft_edges")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor
 public class CraftEdge {
 
     @Id
@@ -21,7 +21,6 @@ public class CraftEdge {
     private Long toNodeId;
 
     @Column(nullable = false)
-    @Builder.Default
     private Integer quantity = 1;
 
     @JsonIgnore

@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 /** Фигура крафта — прямоугольник, круг или ромб с названием и переменной. */
 @Entity
 @Table(name = "craft_nodes")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor
 public class CraftNode {
 
     @Id
@@ -26,27 +26,21 @@ public class CraftNode {
     private String shape;
 
     @Column(name = "pos_x")
-    @Builder.Default
     private Double posX = 0.0;
 
     @Column(name = "pos_y")
-    @Builder.Default
     private Double posY = 0.0;
 
     @Column(name = "item_price")
-    private BigDecimal itemPrice;          // цена покупки единицы (опционально)
+    private BigDecimal itemPrice;
 
     @Column(name = "output_amount")
-    @Builder.Default
     private Integer output = 1;
 
-    //  цена продажи — только у финального узла
     @Column(name = "sale_price", precision = 19, scale = 2)
     private BigDecimal salePrice;
 
-    // является ли узел точкой продажи
     @Column(name = "is_sale_point")
-    @Builder.Default
     private Boolean isSalePoint = false;
 
     @JsonIgnore
