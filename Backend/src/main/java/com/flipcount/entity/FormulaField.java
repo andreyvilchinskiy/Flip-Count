@@ -7,7 +7,7 @@ import lombok.*;
 /** Поле ввода формулы — «Покупка (A)», «Продажа (B)» и т.д. */
 @Entity
 @Table(name = "formula_fields")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor
 public class FormulaField {
 
     @Id
@@ -15,13 +15,12 @@ public class FormulaField {
     private Long id;
 
     @Column(nullable = false)
-    private String label;                  // "Покупка"
+    private String label;
 
     @Column(nullable = false, length = 5)
-    private String variable;               // "A"
+    private String variable;
 
     @Column(name = "display_order")
-    @Builder.Default
     private Integer displayOrder = 0;
 
     @JsonIgnore

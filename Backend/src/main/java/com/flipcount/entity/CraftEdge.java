@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
-/** Стрелка между фигурами с числом (количество). */
 @Entity
 @Table(name = "craft_edges")
 @Getter @Setter @NoArgsConstructor
@@ -27,4 +26,10 @@ public class CraftEdge {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "craft_id", nullable = false)
     private Craft craft;
+
+    @PrePersist
+    @PreUpdate
+    public void fixNulls() {
+        if (quantity == null) quantity = 1;
+    }
 }

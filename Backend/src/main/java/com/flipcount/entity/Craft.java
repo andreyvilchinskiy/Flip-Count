@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** Крафт — визуально собранный рецепт из фигур и стрелок. */
 @Entity
 @Table(name = "crafts")
 @Getter @Setter @NoArgsConstructor
@@ -43,7 +42,6 @@ public class Craft {
     @OneToMany(mappedBy = "craft", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CraftEdge> edges = new ArrayList<>();
 
-    // Конструктор для безопасного создания
     public Craft(String name, String formula, Integer multiplier, User user) {
         this.name = name;
         this.formula = formula;
@@ -56,5 +54,6 @@ public class Craft {
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
+        if (multiplier == null) multiplier = 1;
     }
 }

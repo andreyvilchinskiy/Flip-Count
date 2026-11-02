@@ -53,12 +53,18 @@ public class CraftService {
                 user
         );
 
-        // Сохраняем черновой крафт, чтобы сгенерировались ID для узлов
-        crafts.save(craft);
+        // 🛑 ЖЕСТКАЯ ЗАЩИТА: если конструктор вернул null, мы создаем список вручную
+        if (craft.getNodes() == null) {
+            craft.setNodes(new ArrayList<>());
+        }
+        if (craft.getEdges() == null) {
+            craft.setEdges(new ArrayList<>());
+        }
+
+        crafts.save(craft); // Сохраняем черновой крафт, чтобы получить ID
 
         saveNodesAndEdges(craft, req);
 
-        // Создаём связанную формулу
         Formula formula = new Formula();
         formula.setName(req.getName());
         formula.setExpression(req.getFormula());
@@ -66,9 +72,9 @@ public class CraftService {
         formula.setIsCraft(true);
         formula.setActive(formulas.findByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty());
         formula.setUser(user);
+        formula.setFields(new ArrayList<>());
         formulas.save(formula);
 
-        // Генерируем поля формулы из узлов
         generateFormulaFields(formula, req);
         formulas.save(formula);
 
@@ -86,19 +92,29 @@ public class CraftService {
         craft.setFormula(req.getFormula());
         craft.setMultiplier(req.getMultiplier() != null ? req.getMultiplier() : 1);
 
-        // Очищаем старые списки
-        craft.getNodes().clear();
-        craft.getEdges().clear();
+        if (craft.getNodes() == null) {
+            craft.setNodes(new ArrayList<>());
+        } else {
+            craft.getNodes().clear();
+        }
+
+        if (craft.getEdges() == null) {
+            craft.setEdges(new ArrayList<>());
+        } else {
+            craft.getEdges().clear();
+        }
+
         crafts.save(craft);
 
-        // Заполняем новыми данными
         saveNodesAndEdges(craft, req);
 
         if (craft.getFormulaId() != null) {
             formulas.findById(craft.getFormulaId()).ifPresent(f -> {
                 f.setName(req.getName());
                 f.setExpression(req.getFormula());
-                f.getFields().clear();
+                if (f.getFields() != null) {
+                    f.getFields().clear();
+                }
                 generateFormulaFields(f, req);
                 formulas.save(f);
             });
@@ -109,6 +125,9 @@ public class CraftService {
 
     private void generateFormulaFields(Formula formula, CraftRequest req) {
         if (req.getNodes() == null) return;
+        if (formula.getFields() == null) {
+            formula.setFields(new ArrayList<>());
+        }
 
         Set<Long> withIncoming = new HashSet<>();
         if (req.getEdges() != null) {
@@ -133,9 +152,16 @@ public class CraftService {
     }
 
     private void saveNodesAndEdges(Craft craft, CraftRequest req) {
+        // 🛑 ЖЕСТКАЯ ЗАЩИТА: делаем это в самом начале метода
+        if (craft.getNodes() == null) {
+            craft.setNodes(new ArrayList<>());
+        }
+        if (craft.getEdges() == null) {
+            craft.setEdges(new ArrayList<>());
+        }
+
         Map<Long, Long> tempToReal = new HashMap<>();
 
-        // Узлы
         if (req.getNodes() != null) {
             for (CraftNodeDto dto : req.getNodes()) {
                 CraftNode node = new CraftNode();
@@ -144,15 +170,16 @@ public class CraftService {
                 node.setShape(dto.getShape());
                 node.setPosX(dto.getPosX());
                 node.setPosY(dto.getPosY());
-                node.setItemPrice(dto.getItemPrice());
+                node.setItemPrice(dto.getItemPrice()); // Может быть null
                 node.setOutput(dto.getOutput() != null ? dto.getOutput() : 1);
-                node.setSalePrice(dto.getSalePrice());
+                node.setSalePrice(dto.getSalePrice()); // Может быть null
                 node.setIsSalePoint(dto.getIsSalePoint() != null ? dto.getIsSalePoint() : false);
                 node.setCraft(craft);
 
+                // Теперь не упадет!
                 craft.getNodes().add(node);
             }
-            crafts.save(craft); // Сохраняем, чтобы узлы получили ID
+            crafts.save(craft);
 
             for (int i = 0; i < req.getNodes().size(); i++) {
                 Long tempId = req.getNodes().get(i).getId();
@@ -161,7 +188,6 @@ public class CraftService {
             }
         }
 
-        // Рёбра
         if (req.getEdges() != null) {
             for (CraftEdgeDto dto : req.getEdges()) {
                 Long fromReal = tempToReal.getOrDefault(dto.getFromNodeId(), dto.getFromNodeId());

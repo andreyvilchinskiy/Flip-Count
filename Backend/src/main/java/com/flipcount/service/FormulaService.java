@@ -52,12 +52,12 @@ public class FormulaService {
     public Formula create(String email, FormulaRequest req) {
         User user = currentUser(email);
 
-        Formula formula = Formula.builder()
-                .name(req.getName())
-                .expression(req.getExpression())
-                .user(user)
-                .active(formulas.findByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty())
-                .build();
+        Formula formula = new Formula();
+        formula.setName(req.getName());
+        formula.setExpression(req.getExpression());
+        formula.setUser(user);
+        formula.setActive(formulas.findByUserIdOrderByCreatedAtAsc(user.getId()).isEmpty());
+        formula.setFields(new ArrayList<>()); // Важно: инициализация списка
         formulas.save(formula);
 
         // Создаём поля
@@ -65,12 +65,12 @@ public class FormulaService {
             List<FormulaField> fields = new ArrayList<>();
             int order = 0;
             for (FormulaFieldDto f : req.getFields()) {
-                fields.add(FormulaField.builder()
-                        .label(f.getLabel())
-                        .variable(f.getVariable())
-                        .displayOrder(order++)
-                        .formula(formula)
-                        .build());
+                FormulaField field = new FormulaField();
+                field.setLabel(f.getLabel());
+                field.setVariable(f.getVariable());
+                field.setDisplayOrder(order++);
+                field.setFormula(formula);
+                fields.add(field);
             }
             formula.setFields(fields);
             formulas.save(formula);
@@ -86,19 +86,25 @@ public class FormulaService {
         f.setExpression(req.getExpression());
 
         // Удаляем старые поля
-        f.getFields().clear();
+        if (f.getFields() != null) {
+            f.getFields().clear();
+        } else {
+            f.setFields(new ArrayList<>());
+        }
+
         formulas.save(f);
 
         // Добавляем новые
         if (req.getFields() != null) {
             int order = 0;
             for (FormulaFieldDto dto : req.getFields()) {
-                f.getFields().add(FormulaField.builder()
-                        .label(dto.getLabel())
-                        .variable(dto.getVariable())
-                        .displayOrder(order++)
-                        .formula(f)
-                        .build());
+                FormulaField field = new FormulaField();
+                field.setLabel(dto.getLabel());
+                field.setVariable(dto.getVariable());
+                field.setDisplayOrder(order++);
+                field.setFormula(f);
+
+                f.getFields().add(field);
             }
         }
         return formulas.save(f);

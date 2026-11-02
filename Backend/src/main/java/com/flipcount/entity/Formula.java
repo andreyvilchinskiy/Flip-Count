@@ -3,19 +3,18 @@ package com.flipcount.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.ArrayList;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Формула подсчёта прибыли.
- * Может быть:
- *  - ручной (isCraft = false) — задана пользователем в формуле-настройках
- *  - крафтом (isCraft = true) — создана визуально в редакторе
+ * Может быть ручной или крафтом.
  */
 @Entity
 @Table(name = "formulas")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor
 public class Formula {
 
     @Id
@@ -26,17 +25,15 @@ public class Formula {
     private String name;
 
     @Column(nullable = false, length = 1000)
-    private String expression;            // например: "B - A - B * 0.05"
+    private String expression;
 
     @Column(nullable = false)
-    @Builder.Default
-    private Boolean active = false;       // одна из формул пользователя активна
+    private Boolean active = false;
 
     @Column(name = "craft_id")
-    private Long craftId;                 // если это крафт — ID связанного крафта
+    private Long craftId;
 
     @Column(name = "is_craft", nullable = false)
-    @Builder.Default
     private Boolean isCraft = false;
 
     @Column(name = "created_at")
@@ -48,8 +45,8 @@ public class Formula {
     private User user;
 
     @OneToMany(mappedBy = "formula", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<FormulaField> fields = new ArrayList<>();
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
