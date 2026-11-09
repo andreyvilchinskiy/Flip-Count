@@ -114,3 +114,14 @@ curl http://localhost:8080/api/health
 В браузере:
 
 http://localhost:8082
+
+
+## Context
+<img width="1251" height="80" alt="Context" src="https://github.com/user-attachments/assets/ae032dba-5f0c-4256-ba8e-e8cc47992553" />
+
+## Container
+<img width="565" height="467" alt="Container" src="https://github.com/user-attachments/assets/d7fdcbbb-8969-4285-807e-8ab2e8d1a538" />
+
+## Component
+<img width="529" height="739" alt="Component" src="https://github.com/user-attachments/assets/2d54a7e7-8225-408a-8254-26b4f1ee129a" />
+
