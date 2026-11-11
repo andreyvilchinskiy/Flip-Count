@@ -1,55 +1,37 @@
 /* ============================================
    РЕДАКТОР КРАФТОВ (combined.html)
-   ============================================
-   Визуальный редактор в стиле Miro/draw.io.
-   Пользователь добавляет фигуры, соединяет их стрелками,
-   система автоматически строит формулу прибыли.
-
-   Режимы:
-   - select — выбор и перемещение фигур (ЛКМ на пустом — панорамирование)
-   - link   — создание связей между фигурами
-   - rect/circle/diamond — добавление фигур
    ============================================ */
 
-/* ---------- DOM-ЭЛЕМЕНТЫ ---------- */
 const svg = document.getElementById('craftSvg');
 const viewport = document.getElementById('viewport');
 const nodesLayer = document.getElementById('nodesLayer');
 const edgesLayer = document.getElementById('edgesLayer');
 const editor = document.getElementById('craftEditor');
 
-/* ---------- СОСТОЯНИЕ РЕДАКТОРА ---------- */
-let editingCraftId = null;       // ID редактируемого крафта (null — новый)
-let currentCraftName = null;     // имя редактируемого крафта
+let editingCraftId = null;
+let currentCraftName = null;
 let lastFormulaPlain = '';
-let nodes = [];                  // массив фигур
-let edges = [];                  // массив стрелок
-let nextTempId = 1;              // временный ID для фигур
-let nextVariable = 0;            // счётчик переменных A, B, C...
+let nodes = [];
+let edges = [];
+let nextTempId = 1;
+let nextVariable = 0;
 
-let currentMode = 'select';      // текущий режим
-let selectedNodeTempId = null;   // выделенная фигура
-let selectedEdgeIndex = null;    // выделенная стрелка
-let linkingFrom = null;          // временный ID начала стрелки
+let currentMode = 'select';
+let selectedNodeTempId = null;
+let selectedEdgeIndex = null;
+let linkingFrom = null;
 
-// Панорамирование и зум
 let view = { x: 0, y: 0, scale: 1 };
 let isPanning = false;
 let panStart = { x: 0, y: 0 };
 let viewStart = { x: 0, y: 0 };
 
-// Drag фигуры
 let draggingNode = null;
 let dragOffset = { x: 0, y: 0 };
-
-// Resize фигуры
 let resizing = null;
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-/* ============================================
-   ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ
-   ============================================ */
 document.querySelectorAll('[data-mode]').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.craft-tool-btn').forEach(b => b.classList.remove('active'));
@@ -69,28 +51,17 @@ document.querySelectorAll('[data-shape]').forEach(btn => {
     });
 });
 
-/* ============================================
-   ПРЕОБРАЗОВАНИЕ КООРДИНАТ
-   ============================================ */
-/** Экранные координаты → мировые (с учётом view-трансформации) */
 function screenToWorld(clientX, clientY) {
     const rect = svg.getBoundingClientRect();
     const sx = clientX - rect.left;
     const sy = clientY - rect.top;
-    return {
-        x: (sx - view.x) / view.scale,
-        y: (sy - view.y) / view.scale
-    };
+    return { x: (sx - view.x) / view.scale, y: (sy - view.y) / view.scale };
 }
 
-/* ============================================
-   ДОБАВЛЕНИЕ ФИГУРЫ
-   ============================================ */
 svg.addEventListener('click', (e) => {
     if (e.target.closest('.craft-node')) return;
     if (e.target.closest('.resize-handle')) return;
 
-    // Режим добавления фигуры — создаём по клику
     if (['rect', 'circle', 'diamond'].includes(currentMode)) {
         const pt = screenToWorld(e.clientX, e.clientY);
         addNode(currentMode, pt.x, pt.y);
@@ -99,7 +70,6 @@ svg.addEventListener('click', (e) => {
         document.getElementById('modeCursor').classList.add('active');
         updateHint();
     } else if (currentMode === 'select') {
-        // Клик по пустому полю — снимаем выделение
         selectedNodeTempId = null;
         selectedEdgeIndex = null;
         document.getElementById('propsPanel').style.display = 'none';
@@ -108,43 +78,39 @@ svg.addEventListener('click', (e) => {
     }
 });
 
-/** Создать фигуру с автоматической переменной A, B, C... */
 function addNode(shape, x, y) {
-    const variable = alphabet[nextVariable % 26] +
-        (nextVariable >= 26 ? Math.floor(nextVariable / 26) : '');
+    const variable = alphabet[nextVariable % 26] + (nextVariable >= 26 ? Math.floor(nextVariable / 26) : '');
     nextVariable++;
 
-    nodes.push({
+    // 🆕 Если это ромб, принудительно делаем его продажей
+    const isSale = shape === 'diamond';
+
+    const node = {
         tempId: nextTempId++,
         variable,
-        label: 'Новый',
+        label: isSale ? 'Продажа' : 'Новый',
         shape,
         x, y,
         width: 100,
         height: 50,
         price: null,
         output: 1,
-        salePrice: null,       // 🆕
-        isSalePoint: false     // 🆕
-    });
+        salePrice: null,
+        isSalePoint: isSale
+    };
 
+    nodes.push(node);
     render();
     selectNode(nodes[nodes.length - 1].tempId);
     updateFormula();
 }
 
-/* ============================================
-   ОТРИСОВКА ВСЕГО РЕДАКТОРА
-   ============================================ */
 function render() {
-    // Применяем трансформацию к viewport
-    viewport.setAttribute('transform',
-        `translate(${view.x}, ${view.y}) scale(${view.scale})`);
+    viewport.setAttribute('transform', `translate(${view.x}, ${view.y}) scale(${view.scale})`);
 
     nodesLayer.innerHTML = '';
     edgesLayer.innerHTML = '';
 
-    /* --- Стрелки (рисуем первыми, под фигурами) --- */
     edges.forEach((edge, index) => {
         const from = nodes.find(n => n.tempId === edge.fromTempId);
         const to = nodes.find(n => n.tempId === edge.toTempId);
@@ -158,7 +124,6 @@ function render() {
         pathEl.setAttribute('d', path.d);
         g.appendChild(pathEl);
 
-        // Число на стрелке (количество)
         const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         textEl.setAttribute('x', path.midX);
         textEl.setAttribute('y', path.midY - 4);
@@ -173,7 +138,6 @@ function render() {
         edgesLayer.appendChild(g);
     });
 
-    /* --- Фигуры --- */
     nodes.forEach(node => {
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.classList.add('craft-node');
@@ -186,7 +150,6 @@ function render() {
         const x = node.x - w / 2;
         const y = node.y - h / 2;
 
-        // Создаём фигуру нужной формы
         let shape;
         if (node.shape === 'rect') {
             shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -209,10 +172,13 @@ function render() {
                 ${node.x},${y + h + 5}
                 ${node.x - w / 2},${node.y}
             `);
+            if (node.isSalePoint) {
+                shape.setAttribute('fill', 'rgba(52, 211, 153, 0.2)');
+                shape.setAttribute('stroke', '#34D399');
+            }
         }
         g.appendChild(shape);
 
-        // Название (по центру)
         const labelEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         labelEl.setAttribute('x', node.x);
         labelEl.setAttribute('y', node.y + 5);
@@ -220,7 +186,6 @@ function render() {
         labelEl.textContent = node.label;
         g.appendChild(labelEl);
 
-        // Переменная (A, B, C...) над фигурой
         const varEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         varEl.setAttribute('x', node.x);
         varEl.setAttribute('y', y - 8);
@@ -229,7 +194,6 @@ function render() {
         varEl.textContent = node.variable;
         g.appendChild(varEl);
 
-        // Бейдж output (если > 1) — правый верхний угол
         if (node.output && node.output > 1) {
             const outputBadge = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
@@ -255,7 +219,6 @@ function render() {
             g.appendChild(outputBadge);
         }
 
-        // Обработчики
         g.addEventListener('mousedown', (e) => startDrag(e, node));
         g.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -268,7 +231,6 @@ function render() {
 
         nodesLayer.appendChild(g);
 
-        // Маркеры ресайза — только если фигура выделена
         if (selectedNodeTempId === node.tempId && currentMode === 'select') {
             const handles = [
                 { x: x, y: y, cursor: 'nw' },
@@ -291,15 +253,11 @@ function render() {
     });
 }
 
-/* ============================================
-   ПУТЬ СТРЕЛКИ МЕЖДУ ДВУМЯ ФИГУРАМИ
-   ============================================ */
 function createEdgePath(from, to) {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-    // Отступ от края фигуры
     const r1 = Math.max(from.width || 100, from.height || 50) / 2 + 5;
     const r2 = Math.max(to.width || 100, to.height || 50) / 2 + 15;
 
@@ -311,32 +269,28 @@ function createEdgePath(from, to) {
     const x2 = to.x - nx * r2;
     const y2 = to.y - ny * r2;
 
-    // Слегка изогнутая линия (для красоты)
     const midX = (x1 + x2) / 2 + (y2 - y1) * 0.1;
     const midY = (y1 + y2) / 2 - (x2 - x1) * 0.1;
 
-    return {
-        d: `M ${x1} ${y1} Q ${midX} ${midY} ${x2} ${y2}`,
-        midX,
-        midY
-    };
+    return { d: `M ${x1} ${y1} Q ${midX} ${midY} ${x2} ${y2}`, midX, midY };
 }
 
-/* ============================================
-   DRAG ФИГУРЫ
-   ============================================ */
+function startResize(e, node, corner) {
+    e.preventDefault();
+    e.stopPropagation();
+    resizing = { node, corner, startX: e.clientX, startY: e.clientY, startW: node.width, startH: node.height };
+    document.addEventListener('mousemove', onResizeMove);
+    document.addEventListener('mouseup', onResizeEnd);
+}
 function startDrag(e, node) {
     if (currentMode === 'link') return;
     if (currentMode !== 'select') return;
-
     e.preventDefault();
     e.stopPropagation();
-
     const pt = screenToWorld(e.clientX, e.clientY);
     draggingNode = node;
     dragOffset.x = pt.x - node.x;
     dragOffset.y = pt.y - node.y;
-
     document.addEventListener('mousemove', onDragMove);
     document.addEventListener('mouseup', onDragEnd);
 }
@@ -346,7 +300,47 @@ function onDragMove(e) {
     const pt = screenToWorld(e.clientX, e.clientY);
     draggingNode.x = pt.x - dragOffset.x;
     draggingNode.y = pt.y - dragOffset.y;
-    render();
+
+    // 🚀 ОПТИМИЗАЦИЯ: ищем группу по data-атрибуту и двигаем только её
+    const nodeGroup = nodesLayer.querySelector(`[data-temp-id="${draggingNode.tempId}"]`);
+    if (nodeGroup) {
+        const w = draggingNode.width || 100;
+        const h = draggingNode.height || 50;
+        const x = draggingNode.x - w / 2;
+        const y = draggingNode.y - h / 2;
+
+        const shape = nodeGroup.querySelector('rect, ellipse, polygon');
+        if (shape) {
+            if (draggingNode.shape === 'rect') {
+                shape.setAttribute('x', x);
+                shape.setAttribute('y', y);
+            } else if (draggingNode.shape === 'circle') {
+                shape.setAttribute('cx', draggingNode.x);
+                shape.setAttribute('cy', draggingNode.y);
+            } else if (draggingNode.shape === 'diamond') {
+                shape.setAttribute('points', `
+                    ${draggingNode.x},${y - 5}
+                    ${draggingNode.x + w / 2},${draggingNode.y}
+                    ${draggingNode.x},${y + h + 5}
+                    ${draggingNode.x - w / 2},${draggingNode.y}
+                `);
+            }
+        }
+
+        const labelEl = nodeGroup.querySelector('text:not(.node-variable)');
+        if (labelEl) {
+            labelEl.setAttribute('x', draggingNode.x);
+            labelEl.setAttribute('y', draggingNode.y + 5);
+        }
+        const varEl = nodeGroup.querySelector('.node-variable');
+        if (varEl) {
+            varEl.setAttribute('x', draggingNode.x);
+            varEl.setAttribute('y', y - 8);
+        }
+    }
+
+    // Перерисовываем только стрелки (они должны следовать за фигурой)
+    renderEdgesOnly();
 }
 
 function onDragEnd() {
@@ -356,22 +350,33 @@ function onDragEnd() {
     updateFormula();
 }
 
-/* ============================================
-   РЕСАЙЗ ФИГУРЫ (тянуть за угол)
-   ============================================ */
-function startResize(e, node, corner) {
-    e.preventDefault();
-    e.stopPropagation();
-    resizing = {
-        node,
-        corner,
-        startX: e.clientX,
-        startY: e.clientY,
-        startW: node.width,
-        startH: node.height
-    };
-    document.addEventListener('mousemove', onResizeMove);
-    document.addEventListener('mouseup', onResizeEnd);
+function renderEdgesOnly() {
+    edgesLayer.innerHTML = '';
+    edges.forEach((edge, index) => {
+        const from = nodes.find(n => n.tempId === edge.fromTempId);
+        const to = nodes.find(n => n.tempId === edge.toTempId);
+        if (!from || !to) return;
+
+        const path = createEdgePath(from, to);
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.classList.add('craft-edge');
+
+        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathEl.setAttribute('d', path.d);
+        g.appendChild(pathEl);
+
+        const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textEl.setAttribute('x', path.midX);
+        textEl.setAttribute('y', path.midY - 4);
+        textEl.textContent = edge.quantity;
+        g.appendChild(textEl);
+
+        g.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectEdge(index);
+        });
+        edgesLayer.appendChild(g);
+    });
 }
 
 function onResizeMove(e) {
@@ -407,18 +412,8 @@ function onResizeEnd() {
     document.removeEventListener('mouseup', onResizeEnd);
 }
 
-/* ============================================
-   ПАНОРАМИРОВАНИЕ (ЛКМ по пустому, ПКМ, СКМ)
-   ============================================ */
 editor.addEventListener('mousedown', (e) => {
-    const isEmptyClick = e.button === 0
-        && currentMode === 'select'
-        && !e.target.closest('.craft-node')
-        && !e.target.closest('.craft-props')
-        && !e.target.closest('.craft-toolbar')
-        && !e.target.closest('.craft-zoom-controls')
-        && !e.target.closest('.craft-hint');
-
+    const isEmptyClick = e.button === 0 && currentMode === 'select' && !e.target.closest('.craft-node') && !e.target.closest('.craft-props') && !e.target.closest('.craft-toolbar') && !e.target.closest('.craft-zoom-controls') && !e.target.closest('.craft-hint');
     if (e.button === 1 || e.button === 2 || isEmptyClick) {
         if (e.target.closest('.craft-props') || e.target.closest('.craft-toolbar')) return;
         e.preventDefault();
@@ -431,9 +426,7 @@ editor.addEventListener('mousedown', (e) => {
     }
 });
 
-editor.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-});
+editor.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function onPanMove(e) {
     if (!isPanning) return;
@@ -449,16 +442,12 @@ function onPanEnd() {
     document.removeEventListener('mouseup', onPanEnd);
 }
 
-/* ============================================
-   ЗУМ
-   ============================================ */
 const ZOOM_LEVELS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4];
-let zoomIndex = 6;  // 100%
+let zoomIndex = 6;
 
 function setZoomIndex(idx, mouseX, mouseY) {
     const newIdx = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, idx));
     if (newIdx === zoomIndex) return;
-
     const oldScale = view.scale;
     zoomIndex = newIdx;
     const newScale = ZOOM_LEVELS[zoomIndex];
@@ -484,7 +473,6 @@ editor.addEventListener('wheel', (e) => {
     const rect = svg.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-
     if (e.deltaY > 0) setZoomIndex(zoomIndex - 1, mx, my);
     else setZoomIndex(zoomIndex + 1, mx, my);
 }, { passive: false });
@@ -492,9 +480,6 @@ editor.addEventListener('wheel', (e) => {
 document.getElementById('zoomInCraft').addEventListener('click', () => setZoomIndex(zoomIndex + 1));
 document.getElementById('zoomOutCraft').addEventListener('click', () => setZoomIndex(zoomIndex - 1));
 
-/* ============================================
-   СОЗДАНИЕ СВЯЗИ (СТРЕЛКИ)
-   ============================================ */
 function handleLinkClick(node) {
     if (!linkingFrom) {
         linkingFrom = node.tempId;
@@ -502,16 +487,12 @@ function handleLinkClick(node) {
         updateHint();
         return;
     }
-
     if (linkingFrom === node.tempId) {
         linkingFrom = null;
         updateHint();
         return;
     }
-
-    const exists = edges.some(e =>
-        e.fromTempId === linkingFrom && e.toTempId === node.tempId
-    );
+    const exists = edges.some(e => e.fromTempId === linkingFrom && e.toTempId === node.tempId);
     if (exists) {
         showToast('Такая связь уже есть', 'info');
         linkingFrom = null;
@@ -519,37 +500,22 @@ function handleLinkClick(node) {
         return;
     }
 
-    edges.push({
-        fromTempId: linkingFrom,
-        toTempId: node.tempId,
-        quantity: 1
-    });
-
+    edges.push({ fromTempId: linkingFrom, toTempId: node.tempId, quantity: 1 });
     linkingFrom = null;
 
-    // 🆕 Если целевой узел был выделен — обновим панель свойств
     if (selectedNodeTempId === node.tempId) {
         selectNode(node.tempId);
     } else {
         render();
     }
-
     updateFormula();
     updateHint();
 }
 
-/**
- * Есть ли у узла входящие стрелки?
- * Если да — это промежуточный или финальный узел,
- * у него НЕ показываем поле цены покупки.
- */
 function hasIncomingEdges(tempId) {
     return edges.some(e => e.toTempId === tempId);
 }
 
-/* ============================================
-   ВЫДЕЛЕНИЕ
-   ============================================ */
 function selectNode(tempId) {
     selectedNodeTempId = tempId;
     selectedEdgeIndex = null;
@@ -567,31 +533,29 @@ function selectNode(tempId) {
     document.getElementById('propLabel').value = node.label;
     document.getElementById('propOutput').value = node.output || 1;
 
-    // Цена покупки — только для узлов без входящих
-    const showPrice = !hasIncomingEdges(node.tempId);
-    document.getElementById('priceGroup').style.display =
-        showPrice ? 'block' : 'none';
+    const hasIncoming = hasIncomingEdges(node.tempId);
+    const isSale = !!node.isSalePoint;
+
+    // Цена покупки (только если нет входящих и это не продажа)
+    document.getElementById('priceGroup').style.display = (!hasIncoming && !isSale) ? 'block' : 'none';
     document.getElementById('propPrice').value = node.price ?? '';
 
-    // 🆕 Чекбокс "точка продажи" — только для финальных или уже помеченных
-    const hasOutgoing = edges.some(e => e.fromTempId === node.tempId);
-    const canBeSalePoint = !hasOutgoing || node.isSalePoint;
-    document.getElementById('propIsSale').parentElement.style.display =
-        canBeSalePoint ? 'flex' : 'none';
-
-    // Если узел не может быть SalePoint — снимаем флаг
-    if (!canBeSalePoint && node.isSalePoint) {
-        node.isSalePoint = false;
+    // Выход за 1 крафт (скрываем для продажи)
+    const outputGroup = document.getElementById('outputGroup');
+    if (outputGroup) {
+        outputGroup.style.display = isSale ? 'none' : 'block';
     }
 
-    const isSale = !!node.isSalePoint;
-    document.getElementById('propIsSale').checked = isSale;
+    // Блок цены продажи (показываем только для продажи)
+    const salePointBlock = document.getElementById('salePointBlock');
+    if (salePointBlock) {
+        salePointBlock.style.display = isSale ? 'block' : 'none';
+    }
     document.getElementById('propSalePrice').value = node.salePrice ?? '';
-    document.getElementById('salePriceGroup').style.display =
-        isSale ? 'block' : 'none';
 
     render();
 }
+
 function selectEdge(index) {
     selectedEdgeIndex = index;
     selectedNodeTempId = null;
@@ -602,9 +566,6 @@ function selectEdge(index) {
     render();
 }
 
-/* ============================================
-   ИЗМЕНЕНИЕ СВОЙСТВ
-   ============================================ */
 document.getElementById('propLabel').addEventListener('input', (e) => {
     const node = nodes.find(n => n.tempId === selectedNodeTempId);
     if (node) {
@@ -630,21 +591,12 @@ document.getElementById('propOutput').addEventListener('input', (e) => {
     }
 });
 
-document.getElementById('propIsSale').addEventListener('change', (e) => {
-    const node = nodes.find(n => n.tempId === selectedNodeTempId);
-    if (!node) return;
-    node.isSalePoint = e.target.checked;
-    document.getElementById('salePriceGroup').style.display =
-        e.target.checked ? 'block' : 'none';
-    render();
-    updateFormula();
-});
-
 document.getElementById('propSalePrice').addEventListener('input', (e) => {
     const node = nodes.find(n => n.tempId === selectedNodeTempId);
-    if (!node) return;
-    node.salePrice = parseFloat(e.target.value) || null;
-    updateFormula();
+    if (node) {
+        node.salePrice = parseFloat(e.target.value) || null;
+        updateFormula();
+    }
 });
 
 document.getElementById('propQuantity').addEventListener('input', (e) => {
@@ -657,12 +609,9 @@ document.getElementById('propQuantity').addEventListener('input', (e) => {
 
 document.getElementById('deleteNodeBtn').addEventListener('click', () => {
     if (selectedNodeTempId === null) return;
-
     const deletedId = selectedNodeTempId;
     nodes = nodes.filter(n => n.tempId !== deletedId);
-    edges = edges.filter(e =>
-        e.fromTempId !== deletedId && e.toTempId !== deletedId
-    );
+    edges = edges.filter(e => e.fromTempId !== deletedId && e.toTempId !== deletedId);
     selectedNodeTempId = null;
     document.getElementById('propsPanel').style.display = 'none';
     render();
@@ -675,8 +624,6 @@ document.getElementById('deleteEdgeBtn').addEventListener('click', () => {
     edges.splice(selectedEdgeIndex, 1);
     selectedEdgeIndex = null;
     document.getElementById('edgePropsPanel').style.display = 'none';
-
-    // Если у целевого узла больше нет входящих — обновим панель
     if (selectedNodeTempId === removed.toTempId) {
         selectNode(removed.toTempId);
     } else {
@@ -685,13 +632,9 @@ document.getElementById('deleteEdgeBtn').addEventListener('click', () => {
     updateFormula();
 });
 
-/* ============================================
-   ФОРМУЛА — построение и отображение
-   ============================================ */
 function updateFormula() {
     const body = document.getElementById('formulaBody');
     body.innerHTML = '';
-
     const withOutgoing = new Set(edges.map(e => e.fromTempId));
     const finals = nodes.filter(n => !withOutgoing.has(n.tempId));
 
@@ -702,52 +645,35 @@ function updateFormula() {
 
     const finalNode = finals[finals.length - 1];
     const buildResult = buildPrettyExpression(finalNode.tempId, new Set());
-
     if (!buildResult) {
         body.innerHTML = '<div class="formula-placeholder">Не удалось построить формулу</div>';
         return '';
     }
-    // Сохраняем plain-текст для последующего использования
+
     lastFormulaPlain = buildResult.plain + ' = ' + finalNode.variable + ' (продажа)';
     renderPrettyFormula(body, buildResult, finalNode);
     return lastFormulaPlain;
 }
 
-/**
- * Рекурсивное построение выражения.
- * Каждая часть возвращается в виде:
- * { tokens: [{type,text}], plain: string, simple: bool }
- */
 function buildPrettyExpression(nodeTempId, visited) {
     if (visited.has(nodeTempId)) return null;
     visited.add(nodeTempId);
-
     const node = nodes.find(n => n.tempId === nodeTempId);
     if (!node) return null;
-
     const incoming = edges.filter(e => e.toTempId === nodeTempId);
 
-    // Базовый узел — просто переменная
     if (incoming.length === 0) {
-        return {
-            tokens: [{ type: 'var', text: node.variable }],
-            plain: node.variable,
-            simple: true
-        };
+        return { tokens: [{ type: 'var', text: node.variable }], plain: node.variable, simple: true };
     }
 
     const parts = incoming.map(edge => {
         const from = nodes.find(n => n.tempId === edge.fromTempId);
         if (!from) return null;
-
         const subExpr = buildPrettyExpression(from.tempId, new Set(visited));
-
         let tokens = [...subExpr.tokens];
         let plain = subExpr.plain;
         let simple = subExpr.simple;
 
-
-        // Умножение на количество
         if (edge.quantity !== 1) {
             if (!simple) {
                 tokens = [{ type: 'op', text: '(' }, ...tokens, { type: 'op', text: ')' }];
@@ -758,16 +684,12 @@ function buildPrettyExpression(nodeTempId, visited) {
             plain += ` × ${edge.quantity}`;
             simple = false;
         }
-
         return { tokens, plain, simple };
     }).filter(Boolean);
 
-    if (parts.length === 0) {
-        return { tokens: [{ type: 'var', text: node.variable }], plain: node.variable, simple: true };
-    }
+    if (parts.length === 0) return { tokens: [{ type: 'var', text: node.variable }], plain: node.variable, simple: true };
     if (parts.length === 1) return parts[0];
 
-    // Несколько входов — суммируем
     const tokens = [];
     const plains = [];
     parts.forEach((p, i) => {
@@ -779,14 +701,9 @@ function buildPrettyExpression(nodeTempId, visited) {
         plains.push(p.plain);
     });
 
-    return {
-        tokens,
-        plain: parts.map(p => p.plain).join(' + '),
-        simple: false
-    };
+    return { tokens, plain: parts.map(p => p.plain).join(' + '), simple: false };
 }
 
-/** Красивое отображение формулы с токенами и легендой */
 function renderPrettyFormula(container, result, finalNode) {
     const line = document.createElement('div');
     line.className = 'formula-line';
@@ -807,37 +724,28 @@ function renderPrettyFormula(container, result, finalNode) {
     saleToken.className = 'formula-token sale';
     saleToken.textContent = finalNode.variable + ' · продажа';
     line.appendChild(saleToken);
-
     container.appendChild(line);
 
-    // Легенда переменных
     const legend = document.createElement('div');
     legend.className = 'formula-legend';
 
     nodes.forEach(n => {
         const item = document.createElement('div');
         item.className = 'formula-legend-item';
-
         const dot = document.createElement('div');
         dot.className = 'formula-legend-dot';
-        dot.style.background = n.shape === 'circle' ? '#60A5FA'
-            : (n.shape === 'diamond' ? '#A78BFA' : '#818CF8');
+        dot.style.background = n.shape === 'circle' ? '#60A5FA' : (n.shape === 'diamond' ? '#A78BFA' : '#818CF8');
 
         const label = document.createElement('span');
         label.textContent = `${n.variable} — ${n.label}`;
         if (n.output && n.output > 1) label.textContent += ` (${n.output} ед.)`;
-
         item.appendChild(dot);
         item.appendChild(label);
         legend.appendChild(item);
     });
-
     container.appendChild(legend);
 }
 
-/* ============================================
-   СОХРАНЕНИЕ КРАФТА
-   ============================================ */
 document.getElementById('saveCraftBtn').addEventListener('click', () => {
     if (nodes.length === 0) {
         showToast('Добавьте хотя бы одну фигуру', 'info');
@@ -847,14 +755,8 @@ document.getElementById('saveCraftBtn').addEventListener('click', () => {
 });
 
 function openCraftModal() {
-    document.getElementById('craftModalTitle').textContent =
-        editingCraftId ? 'Сохранить изменения' : 'Новый крафт';
-
-    document.getElementById('craftNameInput').value =
-        editingCraftId && currentCraftName
-            ? currentCraftName
-            : 'Крафт ' + new Date().toLocaleDateString('ru-RU');
-
+    document.getElementById('craftModalTitle').textContent = editingCraftId ? 'Сохранить изменения' : 'Новый крафт';
+    document.getElementById('craftNameInput').value = editingCraftId && currentCraftName ? currentCraftName : 'Крафт ' + new Date().toLocaleDateString('ru-RU');
     document.getElementById('craftModal').classList.add('show');
     setTimeout(() => {
         document.getElementById('craftNameInput').focus();
@@ -873,10 +775,7 @@ async function confirmSaveCraft() {
         return;
     }
 
-    // Берём plain-текст из последнего результата updateFormula
     const formula = lastFormulaPlain || '';
-
-    // Маппинг временных ID → порядковые номера для бэка
     const tempIdToIndex = {};
     nodes.forEach((n, i) => { tempIdToIndex[n.tempId] = i + 1; });
 
@@ -895,7 +794,6 @@ async function confirmSaveCraft() {
             salePrice: n.salePrice || null,
             isSalePoint: n.isSalePoint || false
         })),
-
         edges: edges.map(e => ({
             fromNodeId: tempIdToIndex[e.fromTempId],
             toNodeId: tempIdToIndex[e.toTempId],
@@ -937,9 +835,6 @@ function resetEditor() {
     updateFormula();
 }
 
-/* ============================================
-   СПИСОК СОХРАНЁННЫХ КРАФТОВ
-   ============================================ */
 async function loadCrafts() {
     const container = document.getElementById('craftsList');
     try {
@@ -997,7 +892,6 @@ async function loadCrafts() {
     } catch (err) { console.error(err); }
 }
 
-/** Загрузить сохранённый крафт обратно в редактор */
 async function loadCraftToEditor(craftId) {
     try {
         const craft = await API.getCraft(craftId);
@@ -1043,37 +937,26 @@ async function loadCraftToEditor(craftId) {
         editingCraftId = craft.id;
         currentCraftName = craft.name;
 
-
         render();
         updateFormula();
         showToast('Крафт загружен в редактор', 'success');
 
-        document.querySelector('.craft-editor')
-            .scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.querySelector('.craft-editor').scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (err) {
         showToast(err.message, 'info');
     }
 }
 
-/* ============================================
-   КОПИРОВАНИЕ ФОРМУЛЫ
-   ============================================ */
 document.getElementById('copyFormulaBtn').addEventListener('click', () => {
-    const text = document.getElementById('formulaBody').innerText
-        .split('\n').filter(l => l.trim())[0] || '';
+    const text = document.getElementById('formulaBody').innerText.split('\n').filter(l => l.trim())[0] || '';
     navigator.clipboard.writeText(text);
     showToast('Формула скопирована', 'success');
 });
 
-/* ============================================
-   ПОДСКАЗКА
-   ============================================ */
 function updateHint() {
     const hint = document.getElementById('hintText');
     if (currentMode === 'link') {
-        hint.textContent = linkingFrom
-            ? 'Выберите вторую фигуру'
-            : 'Кликните на первую фигуру';
+        hint.textContent = linkingFrom ? 'Выберите вторую фигуру' : 'Кликните на первую фигуру';
     } else if (['rect', 'circle', 'diamond'].includes(currentMode)) {
         hint.textContent = 'Кликните на поле — добавится фигура';
     } else {
@@ -1081,15 +964,11 @@ function updateHint() {
     }
 }
 
-/* ============================================
-   СТАРТ
-   ============================================ */
 updateHint();
 render();
 updateFormula();
 loadCrafts();
 
-// Если URL содержит ?edit=ID — загружаем крафт в редактор
 (function () {
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('edit');

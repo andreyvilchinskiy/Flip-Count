@@ -85,7 +85,6 @@ function editFormula(id, isCraft) {
 
 /**
  * Загрузка полей ввода по активной формуле.
- * Если формула — крафт, показывает селект множителя.
  */
 async function loadDynamicFields() {
     const container = document.getElementById('dynamicFields');
@@ -111,7 +110,6 @@ async function loadDynamicFields() {
 
             const label = document.createElement('label');
             label.setAttribute('for', 'field_' + f.variable);
-            label.textContent = f.label + ' (' + f.variable + ')';
 
             const input = document.createElement('input');
             input.type = 'number';
@@ -123,8 +121,26 @@ async function loadDynamicFields() {
             input.addEventListener('input', updateProfitPreview);
             input.addEventListener('change', updateProfitPreview);
 
-            group.appendChild(label);
-            group.appendChild(input);
+            // Если это поле продажи (лот), делаем его зеленым и добавляем пояснение
+            if (f.variable === 'SALE_PRICE_LOT') {
+                label.textContent = f.label; // Название придет с бэкенда (например, "Цена продажи (за 1 лот из 3 шт)")
+                label.style.color = '#34D399';
+                input.style.borderColor = '#34D399'; // Зеленая рамка
+
+                const hint = document.createElement('small');
+                hint.style.cssText = 'display:block; color:#94A3B8; font-size:11px; margin-top:6px;';
+                hint.textContent = 'Укажите общую цену за всю партию (лот) целиком.';
+
+                group.appendChild(label);
+                group.appendChild(input);
+                group.appendChild(hint);
+            } else {
+                // Обычные поля (начальное сырье)
+                label.textContent = f.label + ' (' + f.variable + ')';
+                group.appendChild(label);
+                group.appendChild(input);
+            }
+
             container.appendChild(group);
         });
 
@@ -160,8 +176,6 @@ function hideMultiplier() {
 /** Обработчик селекта множителя */
 document.getElementById('dealMultiplier')?.addEventListener('input', (e) => {
     let val = parseInt(e.target.value);
-
-    // Ограничения: от 1 до 10 000 000
     if (isNaN(val) || val < 1) val = 1;
     if (val > 10000000) val = 10000000;
 
@@ -177,9 +191,9 @@ document.querySelectorAll('.multiplier-presets button').forEach(btn => {
         updateProfitPreview();
     });
 });
+
 /**
  * Подсчёт прибыли в реальном времени.
- * Работает и для ручных формул, и для крафтов.
  */
 function updateProfitPreview() {
     const profitEl = document.getElementById('profitValue');
@@ -191,21 +205,14 @@ function updateProfitPreview() {
         return;
     }
 
+    // Собираем введенные пользователем цены
     const values = {};
     document.querySelectorAll('#dynamicFields input').forEach(inp => {
         const val = inp.value.trim();
-        values[inp.dataset.variable] = val === '' ? null : parseFloat(val);
+        values[inp.dataset.variable] = val === '' ? 0 : parseFloat(val);
     });
 
-    const allFilled = Object.values(values).every(v => v !== null && !isNaN(v));
-    if (!allFilled) {
-        profitEl.textContent = '—';
-        labelEl.textContent = 'Прибыль';
-        preview.classList.remove('negative');
-        return;
-    }
-
-    // Debounce 250 мс — не дёргаем API на каждое нажатие
+    // Дебаунс для запроса
     clearTimeout(previewTimer);
     previewTimer = setTimeout(async () => {
         try {
@@ -213,6 +220,7 @@ function updateProfitPreview() {
             const active = profiles.find(p => p.active);
             if (!active) return;
 
+            // Отправляем на бэкенд для расчета
             const res = await API.previewDeal(
                 active.id, activeFormula.id, values, dealMultiplier
             );
@@ -231,6 +239,7 @@ function updateProfitPreview() {
         }
     }, 250);
 }
+
 /* ============================================
    СОХРАНЕНИЕ СДЕЛКИ
    ============================================ */

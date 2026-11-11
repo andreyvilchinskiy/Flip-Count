@@ -30,62 +30,34 @@ public class DealService {
         this.craftService = craftService;
     }
 
-    /**
-     * Результат расчёта крафта:
-     *  - profit    — итоговая прибыль (выручка − затраты)
-     *  - buyPrice  — суммарные затраты на материалы (за multiplier крафтов)
-     *  - sellPrice — выручка от продажи (цена за 1 шт × фактически проданное)
-     */
-    public record CraftCalculation(
-            BigDecimal profit,
-            BigDecimal buyPrice,
-            BigDecimal sellPrice
-    ) {}
+    public record CraftCalculation(BigDecimal profit, BigDecimal buyPrice, BigDecimal sellPrice) {}
 
-    /* ============================================================
-       СОЗДАНИЕ СДЕЛКИ
-       ============================================================ */
     public Deal create(String email, DealRequest req) {
         Profile profile = profiles.findById(req.getProfileId())
                 .orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));
-
         if (!profile.getUser().getEmail().equals(email))
-            throw new IllegalArgumentException("Нет доступа к этому профилю");
+            throw new IllegalArgumentException("Нет доступа");
 
-        Formula formula;
-        if (req.getFormulaId() != null) {
-            formula = formulaService.getOne(email, req.getFormulaId());
-        } else {
-            formula = formulaService.getActive(email);
-            if (formula == null)
-                throw new IllegalArgumentException("Нет активной формулы");
-        }
+        Formula formula = req.getFormulaId() != null
+                ? formulaService.getOne(email, req.getFormulaId())
+                : formulaService.getActive(email);
+        if (formula == null) throw new IllegalArgumentException("Нет активной формулы");
 
-        int multiplier = req.getMultiplier() != null && req.getMultiplier() > 0
-                ? req.getMultiplier() : 1;
+        int multiplier = req.getMultiplier() != null && req.getMultiplier() > 0 ? req.getMultiplier() : 1;
 
-        BigDecimal profit;
-        BigDecimal buyPrice;
-        BigDecimal sellPrice;
+        BigDecimal profit, buyPrice, sellPrice;
 
         if (Boolean.TRUE.equals(formula.getIsCraft()) && formula.getCraftId() != null) {
-            // ---- КРАФТ ----
             Craft craft = craftService.getOne(email, formula.getCraftId());
             CraftCalculation calc = calculateCraft(craft, req.getValues(), multiplier);
             profit = calc.profit();
             buyPrice = calc.buyPrice();
             sellPrice = calc.sellPrice();
         } else {
-            // ---- РУЧНАЯ ФОРМУЛА ----
             profit = calculateProfit(formula.getExpression(), req.getValues());
-
             List<FormulaField> fields = formula.getFields();
-            buyPrice = fields.size() > 0
-                    ? getValue(req.getValues(), fields.get(0).getVariable())
-                    : BigDecimal.ZERO;
-            sellPrice = fields.size() > 1
-                    ? getValue(req.getValues(), fields.get(1).getVariable())
-                    : BigDecimal.ZERO;
+            buyPrice = fields.size() > 0 ? getValue(req.getValues(), fields.get(0).getVariable()) : BigDecimal.ZERO;
+            sellPrice = fields.size() > 1 ? getValue(req.getValues(), fields.get(1).getVariable()) : BigDecimal.ZERO;
         }
 
         Deal deal = Deal.builder()
@@ -99,27 +71,21 @@ public class DealService {
         return deals.save(deal);
     }
 
-    /* ============================================================
-       ПРЕДПРОСМОТР (без сохранения)
-       ============================================================ */
     public Map<String, BigDecimal> preview(String email, DealRequest req) {
         Profile profile = profiles.findById(req.getProfileId())
                 .orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));
         if (!profile.getUser().getEmail().equals(email))
             throw new IllegalArgumentException("Нет доступа");
 
-        Formula formula;
-        if (req.getFormulaId() != null) {
-            formula = formulaService.getOne(email, req.getFormulaId());
-        } else {
-            formula = formulaService.getActive(email);
-            if (formula == null) return Map.of("profit", BigDecimal.ZERO);
-        }
+        Formula formula = req.getFormulaId() != null
+                ? formulaService.getOne(email, req.getFormulaId())
+                : formulaService.getActive(email);
 
-        int multiplier = req.getMultiplier() != null && req.getMultiplier() > 0
-                ? req.getMultiplier() : 1;
+        if (formula == null) return Map.of("profit", BigDecimal.ZERO);
 
+        int multiplier = req.getMultiplier() != null && req.getMultiplier() > 0 ? req.getMultiplier() : 1;
         BigDecimal profit;
+
         if (Boolean.TRUE.equals(formula.getIsCraft()) && formula.getCraftId() != null) {
             Craft craft = craftService.getOne(email, formula.getCraftId());
             profit = calculateCraft(craft, req.getValues(), multiplier).profit();
@@ -129,89 +95,58 @@ public class DealService {
         return Map.of("profit", profit);
     }
 
-    /* ============================================================
-       РАСЧЁТ КРАФТА
-       ============================================================
-       Логика:
-        - multiplier — сколько крафтов за раз.
-        - output финального узла — сколько единиц производится за 1 крафт.
-        - quantity на стрелке к SalePoint — сколько единиц продаём.
-        - Если произвели больше, чем продаём — в прибыль идёт только проданное.
-        - itemPrice начального узла — цена за 1 шт.
-        - values (введённые значения) — цена за 1 шт для каждого начального узла.
-       ============================================================ */
-    public CraftCalculation calculateCraft(Craft craft,
-                                           Map<String, BigDecimal> values,
-                                           int multiplier) {
-
-        // 1. Точка продажи
+    public CraftCalculation calculateCraft(Craft craft, Map<String, BigDecimal> values, int multiplier) {
         CraftNode saleNode = craft.getNodes().stream()
                 .filter(n -> Boolean.TRUE.equals(n.getIsSalePoint()))
-                .findFirst()
-                .orElse(null);
+                .findFirst().orElse(null);
+
+        BigDecimal costPerCraft = calculateMaterialCosts(craft, values);
+        BigDecimal totalCost = costPerCraft.multiply(BigDecimal.valueOf(multiplier));
 
         if (saleNode == null || saleNode.getSalePrice() == null) {
-            // Нет точки продажи — выручки нет, но затраты могут быть
-            BigDecimal costs = calculateMaterialCosts(craft, values, multiplier);
-            return new CraftCalculation(
-                    costs.negate().setScale(2, RoundingMode.HALF_UP),
-                    costs,
-                    BigDecimal.ZERO
-            );
+            return new CraftCalculation(totalCost.negate().setScale(2, RoundingMode.HALF_UP), totalCost.setScale(2, RoundingMode.HALF_UP), BigDecimal.ZERO);
         }
 
-        // 2. Сколько единиц продаём (сумма quantity всех стрелок в SalePoint)
-        int soldUnits = craft.getEdges().stream()
-                .filter(e -> e.getToNodeId().equals(saleNode.getId()))
-                .mapToInt(CraftEdge::getQuantity)
-                .sum();
-        if (soldUnits <= 0) soldUnits = 1;
-
-        // 3. output финального узла (от которого идёт стрелка в SalePoint)
-        Long producerId = craft.getEdges().stream()
-                .filter(e -> e.getToNodeId().equals(saleNode.getId()))
-                .map(CraftEdge::getFromNodeId)
-                .findFirst()
-                .orElse(null);
-
+        // Сколько единиц производится за 1 крафт
         int unitsPerCraft = 1;
-        if (producerId != null) {
-            unitsPerCraft = craft.getNodes().stream()
-                    .filter(n -> n.getId().equals(producerId))
-                    .findFirst()
-                    .map(n -> n.getOutput() != null ? n.getOutput() : 1)
-                    .orElse(1);
+        for (CraftEdge edge : craft.getEdges()) {
+            if (edge.getToNodeId().equals(saleNode.getId())) {
+                CraftNode producer = craft.getNodes().stream()
+                        .filter(n -> n.getId().equals(edge.getFromNodeId()))
+                        .findFirst().orElse(null);
+                if (producer != null && producer.getOutput() != null) {
+                    unitsPerCraft = producer.getOutput();
+                }
+                break;
+            }
         }
 
-        // 4. Произведено vs продано
-        int produced = multiplier * unitsPerCraft;
-        int actualSold = Math.min(produced, soldUnits);
+        int totalProduced = multiplier * unitsPerCraft;
 
-        // 5. Выручка = цена за 1 шт × фактически проданное
-        BigDecimal revenue = saleNode.getSalePrice()
-                .multiply(BigDecimal.valueOf(actualSold));
+        // Сколько штук в лоте
+        int itemsInLot = 1;
+        for (CraftEdge edge : craft.getEdges()) {
+            if (edge.getToNodeId().equals(saleNode.getId())) {
+                itemsInLot = edge.getQuantity();
+                break;
+            }
+        }
 
-        // 6. Затраты на материалы
-        BigDecimal costs = calculateMaterialCosts(craft, values, multiplier);
+        // Количество целых лотов
+        int totalLots = totalProduced / itemsInLot;
 
-        BigDecimal profit = revenue.subtract(costs)
-                .setScale(2, RoundingMode.HALF_UP);
+        // Цена берется из поля "S" (введенная пользователем) или из шаблона
+        BigDecimal pricePerLot = (values != null && values.get("S") != null)
+                ? values.get("S")
+                : saleNode.getSalePrice();
 
-        return new CraftCalculation(
-                profit,
-                costs.setScale(2, RoundingMode.HALF_UP),
-                revenue.setScale(2, RoundingMode.HALF_UP)
-        );
+        BigDecimal revenue = pricePerLot.multiply(BigDecimal.valueOf(totalLots));
+        BigDecimal profit = revenue.subtract(totalCost).setScale(2, RoundingMode.HALF_UP);
+
+        return new CraftCalculation(profit, totalCost.setScale(2, RoundingMode.HALF_UP), revenue.setScale(2, RoundingMode.HALF_UP));
     }
 
-    /**
-     * Сумма затрат на материалы:
-     *   Σ (itemPrice узла × введённая цена × multiplier)
-     * SalePoint в расчёте НЕ участвует.
-     */
-    private BigDecimal calculateMaterialCosts(Craft craft,
-                                              Map<String, BigDecimal> values,
-                                              int multiplier) {
+    private BigDecimal calculateMaterialCosts(Craft craft, Map<String, BigDecimal> values) {
         BigDecimal costs = BigDecimal.ZERO;
         for (CraftNode node : craft.getNodes()) {
             if (Boolean.TRUE.equals(node.getIsSalePoint())) continue;
@@ -220,44 +155,25 @@ public class DealService {
             BigDecimal val = (values != null && values.get(node.getVariable()) != null)
                     ? values.get(node.getVariable())
                     : BigDecimal.ZERO;
-
-            costs = costs.add(
-                    node.getItemPrice()
-                            .multiply(val)
-                            .multiply(BigDecimal.valueOf(multiplier))
-            );
+            costs = costs.add(node.getItemPrice().multiply(val));
         }
         return costs;
     }
 
-    /* ============================================================
-       РУЧНАЯ ФОРМУЛА
-       ============================================================ */
     private BigDecimal getValue(Map<String, BigDecimal> values, String key) {
-        return (values != null && values.get(key) != null)
-                ? values.get(key)
-                : BigDecimal.ZERO;
+        return (values != null && values.get(key) != null) ? values.get(key) : BigDecimal.ZERO;
     }
 
     private BigDecimal calculateProfit(String expression, Map<String, BigDecimal> values) {
         if (expression == null || values == null) return BigDecimal.ZERO;
-
         String cleanExpr = expression.split("=")[0].trim();
         String replaced = cleanExpr;
-
         for (Map.Entry<String, BigDecimal> entry : values.entrySet()) {
-            replaced = replaced.replaceAll("\\b" + entry.getKey() + "\\b",
-                    entry.getValue().toString());
+            replaced = replaced.replaceAll("\\b" + entry.getKey() + "\\b", entry.getValue().toString());
         }
-
-        replaced = replaced.replace("×", "*")
-                .replace("÷", "/")
-                .replace("−", "-")
-                .replace("—", "-");
-
+        replaced = replaced.replace("×", "*").replace("÷", "/").replace("−", "-").replace("—", "-");
         try {
-            double result = eval(replaced);
-            return BigDecimal.valueOf(result).setScale(2, RoundingMode.HALF_UP);
+            return BigDecimal.valueOf(eval(replaced)).setScale(2, RoundingMode.HALF_UP);
         } catch (Exception e) {
             throw new IllegalArgumentException("Ошибка в формуле: " + e.getMessage());
         }
@@ -266,27 +182,18 @@ public class DealService {
     private double eval(final String str) {
         return new Object() {
             int pos = -1, ch;
-
-            void nextChar() {
-                ch = (++pos < str.length()) ? str.charAt(pos) : -1;
-            }
-
+            void nextChar() { ch = (++pos < str.length()) ? str.charAt(pos) : -1; }
             boolean eat(int charToEat) {
                 while (ch == ' ') nextChar();
-                if (ch == charToEat) {
-                    nextChar();
-                    return true;
-                }
+                if (ch == charToEat) { nextChar(); return true; }
                 return false;
             }
-
             double parse() {
                 nextChar();
                 double x = parseExpression();
                 if (pos < str.length()) throw new RuntimeException("Неожиданный символ: " + (char) ch);
                 return x;
             }
-
             double parseExpression() {
                 double x = parseTerm();
                 for (;;) {
@@ -295,7 +202,6 @@ public class DealService {
                     else return x;
                 }
             }
-
             double parseTerm() {
                 double x = parseFactor();
                 for (;;) {
@@ -304,11 +210,9 @@ public class DealService {
                     else return x;
                 }
             }
-
             double parseFactor() {
                 if (eat('+')) return parseFactor();
                 if (eat('-')) return -parseFactor();
-
                 double x;
                 int startPos = this.pos;
                 if (eat('(')) {
@@ -325,22 +229,15 @@ public class DealService {
         }.parse();
     }
 
-    /* ============================================================
-       ПРОЧЕЕ
-       ============================================================ */
     public List<Deal> listByProfile(String email, Long profileId) {
-        Profile profile = profiles.findById(profileId)
-                .orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));
-        if (!profile.getUser().getEmail().equals(email))
-            throw new IllegalArgumentException("Нет доступа");
+        Profile profile = profiles.findById(profileId).orElseThrow(() -> new IllegalArgumentException("Профиль не найден"));
+        if (!profile.getUser().getEmail().equals(email)) throw new IllegalArgumentException("Нет доступа");
         return deals.findByProfileIdOrderByCreatedAtDesc(profileId);
     }
 
     public void delete(String email, Long dealId) {
-        Deal deal = deals.findById(dealId)
-                .orElseThrow(() -> new IllegalArgumentException("Сделка не найдена"));
-        if (!deal.getProfile().getUser().getEmail().equals(email))
-            throw new IllegalArgumentException("Нет доступа");
+        Deal deal = deals.findById(dealId).orElseThrow(() -> new IllegalArgumentException("Сделка не найдена"));
+        if (!deal.getProfile().getUser().getEmail().equals(email)) throw new IllegalArgumentException("Нет доступа");
         deals.delete(deal);
     }
 
