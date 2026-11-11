@@ -23,11 +23,17 @@ Java, Maven и PostgreSQL устанавливать не нужно — они 
 
 ## Структура
 Flip-Count/
+
 ├── Backend/
+
 │ ├── Dockerfile
+
 │ ├── .dockerignore
+
 │ ├── pom.xml
+
 │ └── src/
+
 └── Frontend/
 
 ## Запуск
